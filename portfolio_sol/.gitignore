@@ -1,0 +1,17 @@
+node_modules/
+dist/
+coverage/
+output/
+.playwright-cli/
+*.local
+.env
+.env.local
+.env.*.local
+.env.migration
+.env.*
+!.env.example
+.cache/
+*.log
+media-migration-*.json
+migration-reports/
+.prompts

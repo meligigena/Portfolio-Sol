@@ -1,0 +1,128 @@
+.contact {
+  display: grid;
+  min-height: 100svh;
+  padding: clamp(4rem, 7vw, 7rem) var(--page-gutter) 1rem;
+  background: var(--color-wine-deep);
+  color: var(--color-paper);
+  grid-template-rows: auto 1fr auto;
+}
+
+.contact__header {
+  display: grid;
+  justify-items: start;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.contact__divider {
+  display: block;
+  height: 1px;
+  margin-bottom: clamp(3.4rem, 4.4vw, 4.4rem);
+  background: currentColor;
+  grid-column: 1 / -1;
+}
+
+.contact__header p,
+.contact__label,
+.contact__footer {
+  margin: 0;
+  font-family: var(--font-utility);
+  font-size: clamp(0.66rem, 0.75vw, 0.8rem);
+  letter-spacing: 0.09em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.contact__header h2 {
+  margin: 0;
+  font-size: clamp(4rem, 10vw, 10.5rem);
+  font-weight: 400;
+  line-height: 0.72;
+  text-transform: uppercase;
+}
+
+.contact__header > p {
+  margin-top: clamp(1.25rem, 2vw, 2rem);
+}
+
+.contact__links {
+  --contact-action-size: clamp(1.15rem, 2.5vw, 2.7rem);
+
+  align-self: center;
+  margin-block: clamp(5rem, 9vw, 9rem);
+}
+
+.contact__links a {
+  display: block;
+  border-top: 1px solid currentColor;
+  padding: 1rem 0;
+  color: inherit;
+  font-family: var(--font-profile);
+  font-size: var(--contact-action-size);
+  font-weight: 400;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  text-decoration: none;
+}
+
+.contact__links a:last-child {
+  border-bottom: 1px solid currentColor;
+}
+
+.contact__email {
+  overflow-wrap: anywhere;
+}
+
+.contact__action-content svg {
+  flex: none;
+  width: 1em;
+  height: 1em;
+}
+
+.contact__action-content {
+  display: inline-flex;
+  gap: 0.75rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.contact__action-content .contact__primary-text {
+  font-family: inherit;
+  font-size: inherit;
+  letter-spacing: inherit;
+  line-height: inherit;
+}
+
+.contact__links a:hover,
+.contact__links a:focus-visible {
+  background: var(--color-paper);
+  color: var(--color-wine-deep);
+}
+
+.contact__footer {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid currentColor;
+  padding-bottom: 0.6rem;
+}
+
+@media (max-width: 45rem) {
+  .contact__header {
+    display: block;
+  }
+
+  .contact__header h2 {
+    font-size: 16.5vw;
+  }
+
+  .contact__divider {
+    margin-bottom: 3rem;
+  }
+
+  .contact__links a {
+    font-size: clamp(1.05rem, 5vw, 1.25rem);
+  }
+
+  .contact__action-content {
+    gap: 0.6rem;
+  }
+}

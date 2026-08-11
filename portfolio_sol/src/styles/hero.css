@@ -1,0 +1,123 @@
+.hero {
+  position: relative;
+  display: grid;
+  min-height: 100svh;
+  overflow: clip;
+  padding: 5.25rem var(--page-gutter) 1.25rem;
+  background: #fff;
+  color: var(--color-ink);
+  grid-template-rows: 1fr auto;
+}
+
+.hero__footer,
+.hero__eyebrow {
+  font-family: var(--font-utility);
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.hero__title-stage {
+  position: relative;
+  z-index: 1;
+  align-self: end;
+  padding-bottom: clamp(3rem, 7vh, 6rem);
+  will-change: transform;
+}
+
+.hero__eyebrow {
+  margin: 0 0 clamp(0.8rem, 1.8vh, 1.4rem) 0.35vw;
+  font-size: clamp(1rem, 1.45vw, 1.45rem);
+  translate: 0 -1.25rem;
+}
+
+.hero__title {
+  --hero-title-reveal: -8%;
+
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: baseline;
+  margin: 0;
+  font-size: clamp(6rem, 18.65vw, 22rem);
+  font-weight: 400;
+  line-height: 0.82;
+  clip-path: polygon(
+    -8% -22%,
+    var(--hero-title-reveal) -22%,
+    var(--hero-title-reveal) 122%,
+    -8% 122%
+  );
+  overflow: visible;
+  white-space: nowrap;
+  will-change: clip-path;
+}
+
+.hero__letter {
+  display: inline-block;
+  flex: none;
+}
+
+.hero__footer {
+  display: flex;
+  justify-content: flex-end;
+  border-bottom: 1px solid var(--color-ink);
+  padding-bottom: 0.55rem;
+  font-size: clamp(0.68rem, 0.8vw, 0.86rem);
+}
+
+.hero__footer a {
+  display: inline-flex;
+  gap: 0.75rem;
+  align-items: center;
+  text-decoration: none;
+}
+
+@media (max-width: 60rem) {
+  .hero__title-stage {
+    padding-bottom: clamp(3rem, 8vh, 5rem);
+  }
+
+  .hero__title {
+    font-size: clamp(5rem, 18.4vw, 11rem);
+  }
+
+}
+
+@media (max-width: 40rem) {
+  .hero {
+    min-height: 100svh;
+    padding-top: 4.75rem;
+  }
+
+  .hero__title-stage {
+    padding-bottom: clamp(7.5rem, 18vh, 9.5rem);
+  }
+
+  .hero__eyebrow {
+    margin-bottom: 0.85rem;
+    margin-left: 0.15rem;
+    font-size: clamp(0.95rem, 4.5vw, 1.15rem);
+  }
+
+  .hero__title {
+    font-size: 17.7vw;
+    line-height: 0.84;
+  }
+
+  .hero__footer {
+    font-size: 0.7rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__title-stage,
+  .hero__title {
+    will-change: auto;
+  }
+
+  .hero__title {
+    clip-path: none;
+  }
+}

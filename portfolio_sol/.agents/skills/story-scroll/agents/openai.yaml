@@ -1,0 +1,4 @@
+interface:
+  display_name: "Story Scroll"
+  short_description: "Preserve the shared pinned iPhone story sequence"
+  default_prompt: "Use $story-scroll to extend or validate the portfolio story sequence without duplicating its React implementation."

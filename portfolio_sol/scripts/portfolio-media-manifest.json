@@ -1,0 +1,1028 @@
+{
+  "schemaVersion": 1,
+  "bucket": "portfolio-media",
+  "files": [
+    {
+      "bytes": 819259,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/carruseles/carrusel A/carrusel A 1.jpg",
+      "storagePath": "aqualand/carruseles/carrusel A/carrusel A 1.jpg"
+    },
+    {
+      "bytes": 600501,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/carruseles/carrusel A/carrusel A 2.jpg",
+      "storagePath": "aqualand/carruseles/carrusel A/carrusel A 2.jpg"
+    },
+    {
+      "bytes": 708096,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/carruseles/carrusel A/carrusel A 3.jpg",
+      "storagePath": "aqualand/carruseles/carrusel A/carrusel A 3.jpg"
+    },
+    {
+      "bytes": 628592,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/carruseles/carrusel A/carrusel A 4.jpg",
+      "storagePath": "aqualand/carruseles/carrusel A/carrusel A 4.jpg"
+    },
+    {
+      "bytes": 770499,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/carruseles/carrusel A/carrusel A 5.jpg",
+      "storagePath": "aqualand/carruseles/carrusel A/carrusel A 5.jpg"
+    },
+    {
+      "bytes": 597254,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/carruseles/carrusel B/carrusel B 1.jpg",
+      "storagePath": "aqualand/carruseles/carrusel B/carrusel B 1.jpg"
+    },
+    {
+      "bytes": 455195,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/carruseles/carrusel B/carrusel B 2.jpg",
+      "storagePath": "aqualand/carruseles/carrusel B/carrusel B 2.jpg"
+    },
+    {
+      "bytes": 466279,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/carruseles/carrusel B/carrusel B 3.jpg",
+      "storagePath": "aqualand/carruseles/carrusel B/carrusel B 3.jpg"
+    },
+    {
+      "bytes": 297419,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/catalogos/catalogo1/1.jpg",
+      "storagePath": "aqualand/catalogos/catalogo1/1.jpg"
+    },
+    {
+      "bytes": 397150,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/catalogos/catalogo1/2.jpg",
+      "storagePath": "aqualand/catalogos/catalogo1/2.jpg"
+    },
+    {
+      "bytes": 405464,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/catalogos/catalogo1/3.jpg",
+      "storagePath": "aqualand/catalogos/catalogo1/3.jpg"
+    },
+    {
+      "bytes": 375745,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/catalogos/catalogo1/4.jpg",
+      "storagePath": "aqualand/catalogos/catalogo1/4.jpg"
+    },
+    {
+      "bytes": 367524,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/catalogos/catalogo1/5.jpg",
+      "storagePath": "aqualand/catalogos/catalogo1/5.jpg"
+    },
+    {
+      "bytes": 358918,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/catalogos/catalogo1/6.jpg",
+      "storagePath": "aqualand/catalogos/catalogo1/6.jpg"
+    },
+    {
+      "bytes": 361530,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/catalogos/catalogo1/7.jpg",
+      "storagePath": "aqualand/catalogos/catalogo1/7.jpg"
+    },
+    {
+      "bytes": 378510,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/catalogos/catalogo1/8.jpg",
+      "storagePath": "aqualand/catalogos/catalogo1/8.jpg"
+    },
+    {
+      "bytes": 378021,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/catalogos/catalogo1/9.jpg",
+      "storagePath": "aqualand/catalogos/catalogo1/9.jpg"
+    },
+    {
+      "bytes": 216079,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/catalogos/catalogo2/1.jpg",
+      "storagePath": "aqualand/catalogos/catalogo2/1.jpg"
+    },
+    {
+      "bytes": 269178,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/catalogos/catalogo2/2.jpg",
+      "storagePath": "aqualand/catalogos/catalogo2/2.jpg"
+    },
+    {
+      "bytes": 264678,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/catalogos/catalogo2/3.jpg",
+      "storagePath": "aqualand/catalogos/catalogo2/3.jpg"
+    },
+    {
+      "bytes": 246075,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/catalogos/catalogo2/4.jpg",
+      "storagePath": "aqualand/catalogos/catalogo2/4.jpg"
+    },
+    {
+      "bytes": 279777,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/catalogos/catalogo2/5.jpg",
+      "storagePath": "aqualand/catalogos/catalogo2/5.jpg"
+    },
+    {
+      "bytes": 267715,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/catalogos/catalogo2/6.jpg",
+      "storagePath": "aqualand/catalogos/catalogo2/6.jpg"
+    },
+    {
+      "bytes": 245610,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/catalogos/catalogo2/7.jpg",
+      "storagePath": "aqualand/catalogos/catalogo2/7.jpg"
+    },
+    {
+      "bytes": 203680,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/catalogos/catalogo2/8.jpg",
+      "storagePath": "aqualand/catalogos/catalogo2/8.jpg"
+    },
+    {
+      "bytes": 102597,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/logo.jpg",
+      "storagePath": "aqualand/logo.jpg"
+    },
+    {
+      "bytes": 577347,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/posts/post aqualand (53).jpg",
+      "storagePath": "aqualand/posts/post aqualand (53).jpg"
+    },
+    {
+      "bytes": 742874,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/posts/post aqualand (62).jpg",
+      "storagePath": "aqualand/posts/post aqualand (62).jpg"
+    },
+    {
+      "bytes": 585281,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/posts/post aqualand (63).jpg",
+      "storagePath": "aqualand/posts/post aqualand (63).jpg"
+    },
+    {
+      "bytes": 834156,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/posts/post aqualand (69).jpg",
+      "storagePath": "aqualand/posts/post aqualand (69).jpg"
+    },
+    {
+      "bytes": 495624,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/stories/historias aqualand (31).jpg",
+      "storagePath": "aqualand/stories/historias aqualand (31).jpg"
+    },
+    {
+      "bytes": 894594,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/stories/historias aqualand (32).jpg",
+      "storagePath": "aqualand/stories/historias aqualand (32).jpg"
+    },
+    {
+      "bytes": 969596,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/stories/historias aqualand (33).jpg",
+      "storagePath": "aqualand/stories/historias aqualand (33).jpg"
+    },
+    {
+      "bytes": 610158,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/stories/historias aqualand (34).jpg",
+      "storagePath": "aqualand/stories/historias aqualand (34).jpg"
+    },
+    {
+      "bytes": 1062246,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/stories/historias aqualand (35).jpg",
+      "storagePath": "aqualand/stories/historias aqualand (35).jpg"
+    },
+    {
+      "bytes": 814329,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/stories/historias aqualand (36).jpg",
+      "storagePath": "aqualand/stories/historias aqualand (36).jpg"
+    },
+    {
+      "bytes": 809046,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "aqualand/stories/historias aqualand (37).jpg",
+      "storagePath": "aqualand/stories/historias aqualand (37).jpg"
+    },
+    {
+      "bytes": 403150,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "desnac/carruseles/carrusel A/a 1.jpg",
+      "storagePath": "desnac/carruseles/carrusel A/a 1.jpg"
+    },
+    {
+      "bytes": 613566,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "desnac/carruseles/carrusel A/a 2.jpg",
+      "storagePath": "desnac/carruseles/carrusel A/a 2.jpg"
+    },
+    {
+      "bytes": 602293,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "desnac/carruseles/carrusel A/a 3.jpg",
+      "storagePath": "desnac/carruseles/carrusel A/a 3.jpg"
+    },
+    {
+      "bytes": 492894,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "desnac/carruseles/carrusel A/a 4.jpg",
+      "storagePath": "desnac/carruseles/carrusel A/a 4.jpg"
+    },
+    {
+      "bytes": 562578,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "desnac/carruseles/carrusel B/b 1.jpg",
+      "storagePath": "desnac/carruseles/carrusel B/b 1.jpg"
+    },
+    {
+      "bytes": 386256,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "desnac/carruseles/carrusel B/b 2.jpg",
+      "storagePath": "desnac/carruseles/carrusel B/b 2.jpg"
+    },
+    {
+      "bytes": 358841,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "desnac/carruseles/carrusel B/b 3.jpg",
+      "storagePath": "desnac/carruseles/carrusel B/b 3.jpg"
+    },
+    {
+      "bytes": 405970,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "desnac/carruseles/carrusel B/b 4.jpg",
+      "storagePath": "desnac/carruseles/carrusel B/b 4.jpg"
+    },
+    {
+      "bytes": 434062,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "desnac/carruseles/carrusel B/b 5.jpg",
+      "storagePath": "desnac/carruseles/carrusel B/b 5.jpg"
+    },
+    {
+      "bytes": 599481,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "desnac/carruseles/carrusel C/c 1.jpg",
+      "storagePath": "desnac/carruseles/carrusel C/c 1.jpg"
+    },
+    {
+      "bytes": 552856,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "desnac/carruseles/carrusel C/c 2.jpg",
+      "storagePath": "desnac/carruseles/carrusel C/c 2.jpg"
+    },
+    {
+      "bytes": 313293,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "desnac/carruseles/carrusel C/c 3.jpg",
+      "storagePath": "desnac/carruseles/carrusel C/c 3.jpg"
+    },
+    {
+      "bytes": 477395,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "desnac/carruseles/carrusel D/d 1.jpg",
+      "storagePath": "desnac/carruseles/carrusel D/d 1.jpg"
+    },
+    {
+      "bytes": 244940,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "desnac/carruseles/carrusel D/d 2.jpg",
+      "storagePath": "desnac/carruseles/carrusel D/d 2.jpg"
+    },
+    {
+      "bytes": 309883,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "desnac/carruseles/carrusel D/d 3.jpg",
+      "storagePath": "desnac/carruseles/carrusel D/d 3.jpg"
+    },
+    {
+      "bytes": 526179,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "desnac/carruseles/carrusel D/d 4.jpg",
+      "storagePath": "desnac/carruseles/carrusel D/d 4.jpg"
+    },
+    {
+      "bytes": 79350,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "desnac/logo.jpg",
+      "storagePath": "desnac/logo.jpg"
+    },
+    {
+      "bytes": 498793,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "desnac/posts/post desnac (1).jpg",
+      "storagePath": "desnac/posts/post desnac (1).jpg"
+    },
+    {
+      "bytes": 496218,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "desnac/posts/post desnac (2).jpg",
+      "storagePath": "desnac/posts/post desnac (2).jpg"
+    },
+    {
+      "bytes": 716983,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "desnac/posts/post desnac (3).jpg",
+      "storagePath": "desnac/posts/post desnac (3).jpg"
+    },
+    {
+      "bytes": 471589,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "desnac/posts/post desnac (4).jpg",
+      "storagePath": "desnac/posts/post desnac (4).jpg"
+    },
+    {
+      "bytes": 526792,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "desnac/posts/post desnac (5).jpg",
+      "storagePath": "desnac/posts/post desnac (5).jpg"
+    },
+    {
+      "bytes": 891105,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "desnac/posts/post desnac.jpg",
+      "storagePath": "desnac/posts/post desnac.jpg"
+    },
+    {
+      "bytes": 1209410,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "desnac/stories/historias desnac (1).jpg",
+      "storagePath": "desnac/stories/historias desnac (1).jpg"
+    },
+    {
+      "bytes": 668306,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "desnac/stories/historias desnac (2).jpg",
+      "storagePath": "desnac/stories/historias desnac (2).jpg"
+    },
+    {
+      "bytes": 913158,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "desnac/stories/historias desnac (3).jpg",
+      "storagePath": "desnac/stories/historias desnac (3).jpg"
+    },
+    {
+      "bytes": 674904,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "desnac/stories/historias desnac (4).jpg",
+      "storagePath": "desnac/stories/historias desnac (4).jpg"
+    },
+    {
+      "bytes": 1238750,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "desnac/stories/historias desnac (5).jpg",
+      "storagePath": "desnac/stories/historias desnac (5).jpg"
+    },
+    {
+      "bytes": 887999,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "desnac/stories/historias desnac (6).jpg",
+      "storagePath": "desnac/stories/historias desnac (6).jpg"
+    },
+    {
+      "bytes": 563895,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "desnac/stories/historias desnac.jpg",
+      "storagePath": "desnac/stories/historias desnac.jpg"
+    },
+    {
+      "bytes": 10807780,
+      "contentType": "video/quicktime",
+      "kind": "video",
+      "localPath": "desnac/videos/apps desnac 2.mov",
+      "storagePath": "desnac/videos/apps desnac 2.mov"
+    },
+    {
+      "bytes": 25047618,
+      "contentType": "video/quicktime",
+      "kind": "video",
+      "localPath": "desnac/videos/Copia de IMG_6492.MOV",
+      "storagePath": "desnac/videos/Copia de IMG_6492.MOV"
+    },
+    {
+      "bytes": 10528973,
+      "contentType": "video/quicktime",
+      "kind": "video",
+      "localPath": "desnac/videos/Copia de power bi .mov",
+      "storagePath": "desnac/videos/Copia de power bi .mov"
+    },
+    {
+      "bytes": 715260,
+      "contentType": "image/png",
+      "kind": "image",
+      "localPath": "maja/logo.png",
+      "storagePath": "maja/logo.png"
+    },
+    {
+      "bytes": 49569080,
+      "contentType": "video/quicktime",
+      "kind": "video",
+      "localPath": "maja/videos/copy_349D56FE-B414-4951-96AF-7B78D52889BF.mov",
+      "storagePath": "maja/videos/copy_349D56FE-B414-4951-96AF-7B78D52889BF.mov"
+    },
+    {
+      "bytes": 41151545,
+      "contentType": "video/quicktime",
+      "kind": "video",
+      "localPath": "maja/videos/copy_75EBDB0E-FA48-4E6B-8826-7A4370218237.mov",
+      "storagePath": "maja/videos/copy_75EBDB0E-FA48-4E6B-8826-7A4370218237.mov"
+    },
+    {
+      "bytes": 31990700,
+      "contentType": "video/mp4",
+      "kind": "video",
+      "localPath": "maja/videos/copy_b0a4a16b55120efed5db24eb404cc356.mp4",
+      "storagePath": "maja/videos/copy_b0a4a16b55120efed5db24eb404cc356.mp4"
+    },
+    {
+      "bytes": 29869127,
+      "contentType": "video/quicktime",
+      "kind": "video",
+      "localPath": "maja/videos/copy_23CA139B-41CF-4ED6-8F98-FAC3BB8634F4.mov",
+      "storagePath": "maja/videos/copy_23CA139B-41CF-4ED6-8F98-FAC3BB8634F4.mov"
+    },
+    {
+      "bytes": 508599,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "peumax/carruseles/carrusel A/1 A.jpg",
+      "storagePath": "peumax/carruseles/carrusel A/1 A.jpg"
+    },
+    {
+      "bytes": 314330,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "peumax/carruseles/carrusel A/2 A.jpg",
+      "storagePath": "peumax/carruseles/carrusel A/2 A.jpg"
+    },
+    {
+      "bytes": 557142,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "peumax/carruseles/carrusel A/3 A.jpg",
+      "storagePath": "peumax/carruseles/carrusel A/3 A.jpg"
+    },
+    {
+      "bytes": 515968,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "peumax/carruseles/carrusel B/1 B.jpg",
+      "storagePath": "peumax/carruseles/carrusel B/1 B.jpg"
+    },
+    {
+      "bytes": 522476,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "peumax/carruseles/carrusel B/2 B.jpg",
+      "storagePath": "peumax/carruseles/carrusel B/2 B.jpg"
+    },
+    {
+      "bytes": 40851,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "peumax/logo.jpeg",
+      "storagePath": "peumax/logo.jpeg"
+    },
+    {
+      "bytes": 867643,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "peumax/posts/post peumax (62).jpg",
+      "storagePath": "peumax/posts/post peumax (62).jpg"
+    },
+    {
+      "bytes": 629105,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "peumax/posts/post peumax (63).jpg",
+      "storagePath": "peumax/posts/post peumax (63).jpg"
+    },
+    {
+      "bytes": 991078,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "peumax/posts/post peumax (64).jpg",
+      "storagePath": "peumax/posts/post peumax (64).jpg"
+    },
+    {
+      "bytes": 974976,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "peumax/posts/post peumax (65).jpg",
+      "storagePath": "peumax/posts/post peumax (65).jpg"
+    },
+    {
+      "bytes": 750853,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "peumax/posts/post peumax (66).jpg",
+      "storagePath": "peumax/posts/post peumax (66).jpg"
+    },
+    {
+      "bytes": 1173525,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "peumax/posts/post peumax (67).jpg",
+      "storagePath": "peumax/posts/post peumax (67).jpg"
+    },
+    {
+      "bytes": 327323,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "peumax/posts/post peumax (68).jpg",
+      "storagePath": "peumax/posts/post peumax (68).jpg"
+    },
+    {
+      "bytes": 652258,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "peumax/posts/post peumax (69).jpg",
+      "storagePath": "peumax/posts/post peumax (69).jpg"
+    },
+    {
+      "bytes": 1009474,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "peumax/stories/historias peumax (69).jpg",
+      "storagePath": "peumax/stories/historias peumax (69).jpg"
+    },
+    {
+      "bytes": 695214,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "peumax/stories/historias peumax (70).jpg",
+      "storagePath": "peumax/stories/historias peumax (70).jpg"
+    },
+    {
+      "bytes": 826916,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "peumax/stories/historias peumax (71).jpg",
+      "storagePath": "peumax/stories/historias peumax (71).jpg"
+    },
+    {
+      "bytes": 907551,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "peumax/stories/historias peumax (72).jpg",
+      "storagePath": "peumax/stories/historias peumax (72).jpg"
+    },
+    {
+      "bytes": 591621,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "peumax/stories/historias peumax (73).jpg",
+      "storagePath": "peumax/stories/historias peumax (73).jpg"
+    },
+    {
+      "bytes": 446525,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "peumax/stories/historias peumax (74).jpg",
+      "storagePath": "peumax/stories/historias peumax (74).jpg"
+    },
+    {
+      "bytes": 593379,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "peumax/stories/historias peumax (75).jpg",
+      "storagePath": "peumax/stories/historias peumax (75).jpg"
+    },
+    {
+      "bytes": 681880,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "peumax/stories/historias peumax (76).jpg",
+      "storagePath": "peumax/stories/historias peumax (76).jpg"
+    },
+    {
+      "bytes": 168916,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "rambla/banners/banner_horizontal.jpeg",
+      "storagePath": "rambla/banners/banner_horizontal.jpeg"
+    },
+    {
+      "bytes": 1852231,
+      "contentType": "image/png",
+      "kind": "image",
+      "localPath": "rambla/banners/banner_vertical.png",
+      "storagePath": "rambla/banners/banner_vertical.png"
+    },
+    {
+      "bytes": 85356,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "rambla/logo.jpg",
+      "storagePath": "rambla/logo.jpg"
+    },
+    {
+      "bytes": 814008,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "rambla/stories/historias rambla (60).jpg",
+      "storagePath": "rambla/stories/historias rambla (60).jpg"
+    },
+    {
+      "bytes": 1045042,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "rambla/stories/historias rambla (61).jpg",
+      "storagePath": "rambla/stories/historias rambla (61).jpg"
+    },
+    {
+      "bytes": 926827,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "rambla/stories/historias rambla (62).jpg",
+      "storagePath": "rambla/stories/historias rambla (62).jpg"
+    },
+    {
+      "bytes": 1594195,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "rambla/stories/historias rambla (63).jpg",
+      "storagePath": "rambla/stories/historias rambla (63).jpg"
+    },
+    {
+      "bytes": 1222082,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "rambla/stories/historias rambla (64).jpg",
+      "storagePath": "rambla/stories/historias rambla (64).jpg"
+    },
+    {
+      "bytes": 8564044,
+      "contentType": "video/mp4",
+      "kind": "video",
+      "localPath": "rambla/stories/historias rambla.mp4",
+      "storagePath": "rambla/stories/historias rambla.mp4"
+    },
+    {
+      "bytes": 16910566,
+      "contentType": "video/quicktime",
+      "kind": "video",
+      "localPath": "rambla/videos/Copia de copy_B191B18E-8D69-40E0-B36C-61C96D1EA930.mov",
+      "storagePath": "rambla/videos/Copia de copy_B191B18E-8D69-40E0-B36C-61C96D1EA930.mov"
+    },
+    {
+      "bytes": 27523635,
+      "contentType": "video/mp4",
+      "kind": "video",
+      "localPath": "rambla/videos/Copia de rambla 2.0.mp4",
+      "storagePath": "rambla/videos/Copia de rambla 2.0.mp4"
+    },
+    {
+      "bytes": 19646816,
+      "contentType": "video/mp4",
+      "kind": "video",
+      "localPath": "rambla/videos/Copia de Rambla godere video 1.mp4",
+      "storagePath": "rambla/videos/Copia de Rambla godere video 1.mp4"
+    },
+    {
+      "bytes": 21657408,
+      "contentType": "video/mp4",
+      "kind": "video",
+      "localPath": "rambla/videos/Copia de video rejunte 1.mp4",
+      "storagePath": "rambla/videos/Copia de video rejunte 1.mp4"
+    },
+    {
+      "bytes": 966467,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "sistemas moviles/carruseles/carru 1.jpg",
+      "storagePath": "sistemas-moviles/carruseles/carru 1.jpg"
+    },
+    {
+      "bytes": 691458,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "sistemas moviles/carruseles/carru 2.jpg",
+      "storagePath": "sistemas-moviles/carruseles/carru 2.jpg"
+    },
+    {
+      "bytes": 110157,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "sistemas moviles/logo.jpg",
+      "storagePath": "sistemas-moviles/logo.jpg"
+    },
+    {
+      "bytes": 601207,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "sistemas moviles/posts/post sistemas moviles (18).jpg",
+      "storagePath": "sistemas-moviles/posts/post sistemas moviles (18).jpg"
+    },
+    {
+      "bytes": 566407,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "sistemas moviles/posts/post sistemas moviles (19).jpg",
+      "storagePath": "sistemas-moviles/posts/post sistemas moviles (19).jpg"
+    },
+    {
+      "bytes": 598624,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "sistemas moviles/posts/post sistemas moviles (20).jpg",
+      "storagePath": "sistemas-moviles/posts/post sistemas moviles (20).jpg"
+    },
+    {
+      "bytes": 520175,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "sistemas moviles/posts/post sistemas moviles (21).jpg",
+      "storagePath": "sistemas-moviles/posts/post sistemas moviles (21).jpg"
+    },
+    {
+      "bytes": 1156300,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "sistemas moviles/stories/historias sistemas (11).jpg",
+      "storagePath": "sistemas-moviles/stories/historias sistemas (11).jpg"
+    },
+    {
+      "bytes": 662730,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "sistemas moviles/stories/historias sistemas (12).jpg",
+      "storagePath": "sistemas-moviles/stories/historias sistemas (12).jpg"
+    },
+    {
+      "bytes": 1078828,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "sistemas moviles/stories/historias sistemas (13).jpg",
+      "storagePath": "sistemas-moviles/stories/historias sistemas (13).jpg"
+    },
+    {
+      "bytes": 47236003,
+      "contentType": "video/mp4",
+      "kind": "video",
+      "localPath": "sistemas moviles/videos/0810(1).mp4",
+      "storagePath": "sistemas-moviles/videos/0810(1).mp4"
+    },
+    {
+      "bytes": 11719943,
+      "contentType": "video/mp4",
+      "kind": "video",
+      "localPath": "sistemas moviles/videos/Copia de sistemas hik vision.mp4",
+      "storagePath": "sistemas-moviles/videos/Copia de sistemas hik vision.mp4"
+    },
+    {
+      "bytes": 30143949,
+      "contentType": "video/mp4",
+      "kind": "video",
+      "localPath": "tardeo/edicion 1/fila 1/club tardeo max carra.mp4",
+      "storagePath": "tardeo/edicion 1/fila 1/club tardeo max carra.mp4"
+    },
+    {
+      "bytes": 11587318,
+      "contentType": "video/mp4",
+      "kind": "video",
+      "localPath": "tardeo/edicion 1/fila 1/jaime tardeo .mp4",
+      "storagePath": "tardeo/edicion 1/fila 1/jaime tardeo .mp4"
+    },
+    {
+      "bytes": 28782319,
+      "contentType": "video/mp4",
+      "kind": "video",
+      "localPath": "tardeo/edicion 1/fila 1/la vuelta banda tardeo.mp4",
+      "storagePath": "tardeo/edicion 1/fila 1/la vuelta banda tardeo.mp4"
+    },
+    {
+      "bytes": 12181875,
+      "contentType": "video/mp4",
+      "kind": "video",
+      "localPath": "tardeo/edicion 1/fila 1/mati marquez tardeo.mp4",
+      "storagePath": "tardeo/edicion 1/fila 1/mati marquez tardeo.mp4"
+    },
+    {
+      "bytes": 15275168,
+      "contentType": "video/mp4",
+      "kind": "video",
+      "localPath": "tardeo/edicion 1/fila 1/tardeo mica marquez.mp4",
+      "storagePath": "tardeo/edicion 1/fila 1/tardeo mica marquez.mp4"
+    },
+    {
+      "bytes": 25780851,
+      "contentType": "video/mp4",
+      "kind": "video",
+      "localPath": "tardeo/edicion 1/fila 1/tardeo tomi lujan.mp4",
+      "storagePath": "tardeo/edicion 1/fila 1/tardeo tomi lujan.mp4"
+    },
+    {
+      "bytes": 15940774,
+      "contentType": "video/mp4",
+      "kind": "video",
+      "localPath": "tardeo/edicion 1/fila 2/Copia de max carra tardeo.mp4",
+      "storagePath": "tardeo/edicion 1/fila 2/Copia de max carra tardeo.mp4"
+    },
+    {
+      "bytes": 11648716,
+      "contentType": "video/mp4",
+      "kind": "video",
+      "localPath": "tardeo/edicion 1/fila 2/tardeo early.mp4",
+      "storagePath": "tardeo/edicion 1/fila 2/tardeo early.mp4"
+    },
+    {
+      "bytes": 32510345,
+      "contentType": "video/mp4",
+      "kind": "video",
+      "localPath": "tardeo/edicion 1/fila 2/tardeo final.mp4",
+      "storagePath": "tardeo/edicion 1/fila 2/tardeo final.mp4"
+    },
+    {
+      "bytes": 1518582,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "tardeo/edicion 1/stories/tardeo (92).jpg",
+      "storagePath": "tardeo/edicion 1/stories/tardeo (92).jpg"
+    },
+    {
+      "bytes": 1172649,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "tardeo/edicion 1/stories/tardeo (93).jpg",
+      "storagePath": "tardeo/edicion 1/stories/tardeo (93).jpg"
+    },
+    {
+      "bytes": 1658037,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "tardeo/edicion 1/stories/tardeo (94).jpg",
+      "storagePath": "tardeo/edicion 1/stories/tardeo (94).jpg"
+    },
+    {
+      "bytes": 1031524,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "tardeo/edicion 1/stories/tardeo (95).jpg",
+      "storagePath": "tardeo/edicion 1/stories/tardeo (95).jpg"
+    },
+    {
+      "bytes": 1077003,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "tardeo/edicion 1/stories/tardeo (96).jpg",
+      "storagePath": "tardeo/edicion 1/stories/tardeo (96).jpg"
+    },
+    {
+      "bytes": 712375,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "tardeo/edicion 1/stories/tardeo (97).jpg",
+      "storagePath": "tardeo/edicion 1/stories/tardeo (97).jpg"
+    },
+    {
+      "bytes": 1659192,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "tardeo/edicion 1/stories/tardeo (98).jpg",
+      "storagePath": "tardeo/edicion 1/stories/tardeo (98).jpg"
+    },
+    {
+      "bytes": 82393,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "tardeo/logo.jpeg",
+      "storagePath": "tardeo/logo.jpeg"
+    },
+    {
+      "bytes": 91585,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "tori/logo.jpeg",
+      "storagePath": "tori/logo.jpeg"
+    },
+    {
+      "bytes": 81488,
+      "contentType": "image/jpeg",
+      "kind": "image",
+      "localPath": "vectus/logo.jpg",
+      "storagePath": "vectus/logo.jpg"
+    },
+    {
+      "bytes": 22349804,
+      "contentType": "video/mp4",
+      "kind": "video",
+      "localPath": "vectus/videos/CONSEJOS.mp4",
+      "storagePath": "vectus/videos/CONSEJOS.mp4"
+    },
+    {
+      "bytes": 29101945,
+      "contentType": "video/mp4",
+      "kind": "video",
+      "localPath": "vectus/videos/Copia de riesgos vectus.mp4",
+      "storagePath": "vectus/videos/Copia de riesgos vectus.mp4"
+    },
+    {
+      "bytes": 34645134,
+      "contentType": "video/mp4",
+      "kind": "video",
+      "localPath": "vectus/videos/Copia de SUMMIT.mp4",
+      "storagePath": "vectus/videos/Copia de SUMMIT.mp4"
+    },
+    {
+      "bytes": 32149719,
+      "contentType": "video/mp4",
+      "kind": "video",
+      "localPath": "vectus/videos/Copia de VECTUS S21.mp4",
+      "storagePath": "vectus/videos/Copia de VECTUS S21.mp4"
+    },
+    {
+      "bytes": 30936486,
+      "contentType": "video/quicktime",
+      "kind": "video",
+      "localPath": "vectus/videos/Copia de webinar .mov",
+      "storagePath": "vectus/videos/Copia de webinar .mov"
+    }
+  ]
+}

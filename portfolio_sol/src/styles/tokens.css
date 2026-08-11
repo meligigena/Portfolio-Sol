@@ -1,0 +1,21 @@
+@font-face {
+  font-family: "Network Free";
+  src: url("../../fonts/NetworkFreeVersion.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+:root {
+  --color-ink: #080808;
+  --color-wine: #781a34;
+  --color-wine-deep: #3a0a18;
+  --color-paper: #f7f7f5;
+  --color-proof: #a9a2a5;
+  --font-display: "Network Free", Impact, sans-serif;
+  --font-profile: "Montserrat", Arial, Helvetica, sans-serif;
+  --font-utility: "Oswald", "Arial Narrow", sans-serif;
+  --font-body: Inter, Arial, Helvetica, sans-serif;
+  --page-gutter: clamp(1rem, 3vw, 3rem);
+  --focus-ring: 2px solid var(--color-wine);
+}
