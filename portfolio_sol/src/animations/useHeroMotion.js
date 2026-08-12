@@ -1,11 +1,15 @@
 import { useRef } from "react";
 import { gsap, ScrollTrigger, useGSAP } from "./gsap";
 
-export function useHeroMotion() {
+export function useHeroMotion(networkFontReady = true) {
   const heroRef = useRef(null);
 
   useGSAP(
     (context, contextSafe) => {
+      if (!networkFontReady) {
+        return undefined;
+      }
+
       const media = gsap.matchMedia();
 
       media.add(
@@ -72,7 +76,11 @@ export function useHeroMotion() {
 
       return () => media.revert();
     },
-    { scope: heroRef },
+    {
+      dependencies: [networkFontReady],
+      revertOnUpdate: true,
+      scope: heroRef,
+    },
   );
 
   return heroRef;

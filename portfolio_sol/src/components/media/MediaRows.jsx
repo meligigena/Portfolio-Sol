@@ -30,17 +30,6 @@ export function MediaRows({ rows }) {
     const videos = [...(rowsRef.current?.querySelectorAll("video") ?? [])];
 
     videos.forEach((video) => {
-      video.muted = true;
-      video.play()?.catch?.(() => {});
-    });
-
-    return () => videos.forEach((video) => video.pause());
-  }, [rows]);
-
-  useEffect(() => {
-    const videos = [...(rowsRef.current?.querySelectorAll("video") ?? [])];
-
-    videos.forEach((video) => {
       video.muted =
         video.dataset.audioEnabled !== "true" ||
         video.dataset.viewportVisible === "false" ||
@@ -105,7 +94,6 @@ export function MediaRows({ rows }) {
                 <div className="case-study__media-row-cell" key={item.id}>
                   <video
                     aria-label={item.alt}
-                    autoPlay
                     className="case-study__media-row-item"
                     data-audio-enabled={audioAllowed}
                     data-strip-video={item.id}
@@ -118,7 +106,7 @@ export function MediaRows({ rows }) {
                       }
                     }}
                     playsInline
-                    preload="metadata"
+                    preload="none"
                     width={item.width}
                   >
                     <source src={portfolioMediaUrl(item.src)} />

@@ -383,11 +383,11 @@ const majaVideos = createStandardVideoSet({
 });
 
 const vectusVideos = [
-  "CONSEJOS.mp4",
-  "Copia de riesgos vectus.mp4",
-  "Copia de SUMMIT.mp4",
-  "Copia de VECTUS S21.mp4",
-  "Copia de webinar .mov",
+  "CONSEJOS-web-h264.mp4",
+  "Copia de riesgos vectus-web-h264.mp4",
+  "Copia de SUMMIT-web-h264.mp4",
+  "Copia de VECTUS S21-web-h264.mp4",
+  "Copia de webinar-web-h264.mp4",
 ].map((fileName, index) => ({
   id: `video-vectus-${index + 1}`,
   title: "VIDEO",

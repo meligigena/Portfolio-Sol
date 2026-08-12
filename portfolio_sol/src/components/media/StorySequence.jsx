@@ -1,24 +1,20 @@
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { gsap, useGSAP } from "../../animations/gsap";
 import { portfolioMediaUrl } from "../../lib/portfolioMedia";
+import { useVideoViewportVisibility } from "./useVideoViewportVisibility";
 
 export function StorySequence({ companionVideo = null, presentation = "singlePhone", projects }) {
   const sequenceRef = useRef(null);
-  const companionVideoRef = useRef(null);
   const isDualPhone = presentation === "dualPhoneVideo" && Boolean(companionVideo);
 
-  useEffect(() => {
-    const video = companionVideoRef.current;
-
-    if (!video) {
-      return;
-    }
-
-    video.muted = true;
-    video.play()?.catch?.(() => {});
-
-    return () => video.pause();
-  }, [companionVideo]);
+  useVideoViewportVisibility({
+    containerRef: sequenceRef,
+    observeKey: companionVideo,
+    onVisible: (video) => {
+      video.muted = true;
+      video.play()?.catch?.(() => {});
+    },
+  });
 
   useGSAP(
     () => {
@@ -94,7 +90,6 @@ export function StorySequence({ companionVideo = null, presentation = "singlePho
                 <div className="project-media__phone-screen">
                   <video
                     aria-label={companionVideo.alt}
-                    autoPlay
                     height={companionVideo.height}
                     loop
                     muted
@@ -104,8 +99,7 @@ export function StorySequence({ companionVideo = null, presentation = "singlePho
                       }
                     }}
                     playsInline
-                    preload="metadata"
-                    ref={companionVideoRef}
+                    preload="none"
                     src={portfolioMediaUrl(companionVideo.src)}
                     width={companionVideo.width}
                   />

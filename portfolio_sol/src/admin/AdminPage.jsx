@@ -42,7 +42,22 @@ function Login({ error, loading, onSubmit }) {
         }}
       >
         <p className="admin-kicker">SF / PRIVADO</p>
-        <DisplayHeading as="h1" text="Administración portfolio" />
+        <DisplayHeading
+          as="h1"
+          className="admin-login__title"
+          text="Administración portfolio"
+        >
+          {(visualTitle) => {
+            const [firstLine, ...remainingWords] = visualTitle.split(" ");
+
+            return (
+              <>
+                <span>{firstLine}</span>
+                <span>{remainingWords.join(" ")}</span>
+              </>
+            );
+          }}
+        </DisplayHeading>
         <label>
           Email
           <input

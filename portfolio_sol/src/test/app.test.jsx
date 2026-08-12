@@ -63,6 +63,7 @@ function mockIntersectionObserver() {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  delete document.fonts;
 });
 
 describe("portfolio routes", () => {
@@ -91,6 +92,38 @@ describe("portfolio routes", () => {
     expect(
       screen.getByRole("heading", { level: 2, name: "Contacto" }),
     ).toBeInTheDocument();
+  });
+
+  it("keeps the hero title hidden until the Network font is ready", async () => {
+    let resolveFont;
+    const fontLoad = new Promise((resolve) => {
+      resolveFont = resolve;
+    });
+    const load = vi.fn(() => fontLoad);
+
+    Object.defineProperty(document, "fonts", {
+      configurable: true,
+      value: { load, ready: Promise.resolve() },
+    });
+
+    renderRoute();
+
+    const title = screen.getByRole("heading", { level: 1, name: "PORTFOLIO" });
+    const indexHtml = readFileSync("index.html", "utf8");
+    const heroStyles = readFileSync("src/styles/hero.css", "utf8");
+
+    expect(load).toHaveBeenCalledWith('400 1em "Network Free"');
+    expect(title).toHaveAttribute("data-font-ready", "false");
+    expect(indexHtml).toMatch(
+      /rel="preload"[^>]+as="font"[^>]+NetworkFreeVersion\.ttf/,
+    );
+    expect(heroStyles).toMatch(
+      /\.hero__title\[data-font-ready="false"\][^{]*\{[^}]*visibility:\s*hidden/,
+    );
+
+    await act(async () => resolveFont([]));
+
+    expect(title).toHaveAttribute("data-font-ready", "true");
   });
 
   it("renders exactly the definitive nine-client sequence", () => {
@@ -661,10 +694,21 @@ describe("portfolio routes", () => {
     expect(document.querySelectorAll("[data-video-slide]")).toHaveLength(5);
     expect(document.querySelectorAll('[data-media-kind="video"]')).toHaveLength(5);
     expect(document.querySelectorAll("video")).toHaveLength(5);
-    document.querySelectorAll("[data-video-slide] video").forEach((video) => {
+    expect(
+      [...document.querySelectorAll("[data-video-slide] source")].map((source) =>
+        source.getAttribute("src"),
+      ),
+    ).toEqual([
+      portfolioMediaUrl("vectus/videos/CONSEJOS-web-h264.mp4"),
+      portfolioMediaUrl("vectus/videos/Copia de riesgos vectus-web-h264.mp4"),
+      portfolioMediaUrl("vectus/videos/Copia de SUMMIT-web-h264.mp4"),
+      portfolioMediaUrl("vectus/videos/Copia de VECTUS S21-web-h264.mp4"),
+      portfolioMediaUrl("vectus/videos/Copia de webinar-web-h264.mp4"),
+    ]);
+    document.querySelectorAll("[data-video-slide] video").forEach((video, index) => {
       expect(video.muted).toBe(true);
       expect(video).toHaveAttribute("playsinline");
-      expect(video).toHaveAttribute("preload", "metadata");
+      expect(video).toHaveAttribute("preload", index === 0 ? "auto" : "none");
     });
     document.querySelectorAll("[data-video-stack] figcaption").forEach((caption) => {
       expect(caption).toHaveTextContent(/^VIDEO$/);
@@ -763,7 +807,8 @@ describe("portfolio routes", () => {
     expect(document.querySelectorAll("[data-media-row]")).toHaveLength(2);
   });
 
-  it("restarts every Tardeo video after SPA navigation", async () => {
+  it("loads and plays only Tardeo videos that enter the viewport", async () => {
+    const observers = mockIntersectionObserver();
     const play = vi
       .spyOn(HTMLMediaElement.prototype, "play")
       .mockResolvedValue(undefined);
@@ -773,7 +818,35 @@ describe("portfolio routes", () => {
     await router.navigate("/portfolio/tardeo");
     await screen.findByRole("heading", { level: 1, name: "Tardeo" });
 
-    await waitFor(() => expect(play).toHaveBeenCalledTimes(9));
+    const videos = [...document.querySelectorAll("[data-media-row] video")];
+    let rowObserver;
+
+    await waitFor(() => {
+      rowObserver = observers.find((observer) =>
+        observer.observe.mock.calls.some(([target]) => target === videos[0]),
+      );
+      expect(rowObserver).toBeDefined();
+    });
+
+    expect(videos).toHaveLength(9);
+    videos.forEach((video) => {
+      expect(video).toHaveAttribute("preload", "none");
+      expect(video).not.toHaveAttribute("autoplay");
+    });
+    expect(play).not.toHaveBeenCalled();
+
+    act(() => {
+      rowObserver.callback(
+        videos.map((target, index) => ({
+          target,
+          isIntersecting: index === 0,
+          intersectionRatio: index === 0 ? 0.8 : 0,
+        })),
+      );
+    });
+
+    expect(play).toHaveBeenCalledTimes(1);
+    expect(play).toHaveBeenCalledWith();
     play.mockRestore();
   });
 
@@ -942,8 +1015,9 @@ describe("portfolio routes", () => {
       portfolioMediaUrl("rambla/stories/historias rambla.mp4"),
     );
     expect(companionVideo.muted).toBe(true);
-    expect(companionVideo).toHaveAttribute("autoplay");
+    expect(companionVideo).not.toHaveAttribute("autoplay");
     expect(companionVideo).toHaveAttribute("playsinline");
+    expect(companionVideo).toHaveAttribute("preload", "none");
     expect(storySection.querySelector(".video-sound-toggle")).not.toBeInTheDocument();
   });
 

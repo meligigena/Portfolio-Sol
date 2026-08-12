@@ -122,6 +122,28 @@ describe("private portfolio admin", () => {
     expect(screen.queryByText(/crear cuenta|registrarse/i)).not.toBeInTheDocument();
   });
 
+  it("centers the login title as a left-aligned editorial block", async () => {
+    render(<AdminPage service={createService()} />);
+
+    const heading = await screen.findByRole("heading", {
+      name: /Administraci.n portfolio/i,
+    });
+    const styles = readFileSync("src/styles/admin.css", "utf8");
+    const titleRule =
+      styles.match(/\.admin-login h1\.admin-login__title\s*\{[^}]+}/)?.[0] ?? "";
+
+    expect(heading).toHaveClass("admin-login__title");
+    expect([...heading.children].map((line) => line.textContent)).toEqual([
+      "Administracion",
+      "portfolio",
+    ]);
+    expect(titleRule).toContain("width: fit-content");
+    expect(titleRule).toContain("max-width: 100%");
+    expect(titleRule).toContain("margin-inline: auto");
+    expect(titleRule).toContain("text-align: left");
+    expect(titleRule).toContain("font-size: clamp(2rem, 4.3vw, 3.5rem)");
+  });
+
   it("shows an explicit error after an invalid login", async () => {
     const service = createService({
       signIn: vi.fn().mockRejectedValue(new Error("Invalid login credentials")),

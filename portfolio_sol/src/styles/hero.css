@@ -54,6 +54,10 @@
   will-change: clip-path;
 }
 
+.hero__title[data-font-ready="false"] {
+  visibility: hidden;
+}
+
 .hero__letter {
   display: inline-block;
   flex: none;

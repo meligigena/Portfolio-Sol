@@ -194,7 +194,7 @@ export function VideoStack({ items }) {
                     }
                   }}
                   playsInline
-                  preload="metadata"
+                  preload={index === activeIndex ? "auto" : "none"}
                   width={item.width}
                 >
                   <source src={portfolioMediaUrl(item.src)} />
