@@ -181,9 +181,9 @@ const desnacCarousels = [
 ];
 
 const desnacVideos = [
-  "apps desnac 2.mov",
-  "Copia de IMG_6492.MOV",
-  "Copia de power bi .mov",
+  "apps desnac 2-web-h264.mp4",
+  "Copia de IMG_6492-web-h264.mp4",
+  "Copia de power bi-web-h264.mp4",
 ].map((fileName, index) => ({
   id: `video-desnac-${index + 1}`,
   title: "VIDEO",
@@ -290,8 +290,8 @@ const sistemasMovilesVideos = createStandardVideoSet({
   clientName: "Sistemas Móviles",
   clientSlug: "sistemas-moviles",
   files: [
-    { fileName: "0810(1).mp4", width: 720, height: 1280 },
-    "Copia de sistemas hik vision.mp4",
+    { fileName: "0810(1)-web-h264.mp4", width: 720, height: 1280 },
+    "Copia de sistemas hik vision-web-h264.mp4",
   ],
 });
 
@@ -325,10 +325,14 @@ const ramblaVideos = createStandardVideoSet({
   clientName: "Rambla",
   clientSlug: "rambla",
   files: [
-    "Copia de copy_B191B18E-8D69-40E0-B36C-61C96D1EA930.mov",
-    "Copia de rambla 2.0.mp4",
-    "Copia de Rambla godere video 1.mp4",
-    { fileName: "Copia de video rejunte 1.mp4", width: 1080, height: 1936 },
+    "Copia de copy_B191B18E-8D69-40E0-B36C-61C96D1EA930-web-h264.mp4",
+    "Copia de rambla 2.0-web-h264.mp4",
+    "Copia de Rambla godere video 1-web-h264.mp4",
+    {
+      fileName: "Copia de video rejunte 1-web-h264.mp4",
+      width: 1080,
+      height: 1936,
+    },
   ],
 });
 
@@ -364,18 +368,18 @@ const majaVideos = createStandardVideoSet({
   clientSlug: "maja",
   files: [
     {
-      fileName: "copy_349D56FE-B414-4951-96AF-7B78D52889BF.mov",
+      fileName: "copy_349D56FE-B414-4951-96AF-7B78D52889BF-web-h264.mp4",
       width: 1080,
       height: 1908,
     },
-    "copy_75EBDB0E-FA48-4E6B-8826-7A4370218237.mov",
+    "copy_75EBDB0E-FA48-4E6B-8826-7A4370218237-web-h264.mp4",
     {
-      fileName: "copy_b0a4a16b55120efed5db24eb404cc356.mp4",
+      fileName: "copy_b0a4a16b55120efed5db24eb404cc356-web-h264.mp4",
       width: 720,
       height: 1280,
     },
     {
-      fileName: "copy_23CA139B-41CF-4ED6-8F98-FAC3BB8634F4.mov",
+      fileName: "copy_23CA139B-41CF-4ED6-8F98-FAC3BB8634F4-web-h264.mp4",
       width: 1080,
       height: 1920,
     },
@@ -429,17 +433,17 @@ function createTardeoMediaRow(rowNumber, items) {
 
 const tardeoMediaRows = [
   createTardeoMediaRow(1, [
-    { fileName: "club tardeo max carra.mp4", audioEnabled: false },
-    { fileName: "jaime tardeo .mp4", audioEnabled: false },
-    { fileName: "la vuelta banda tardeo.mp4", audioEnabled: false },
-    { fileName: "mati marquez tardeo.mp4", audioEnabled: false },
-    { fileName: "tardeo mica marquez.mp4", audioEnabled: false },
-    { fileName: "tardeo tomi lujan.mp4", audioEnabled: false },
+    { fileName: "club tardeo max carra-web-h264.mp4", audioEnabled: false },
+    { fileName: "jaime tardeo-web-h264.mp4", audioEnabled: false },
+    { fileName: "la vuelta banda tardeo-web-h264.mp4", audioEnabled: false },
+    { fileName: "mati marquez tardeo-web-h264.mp4", audioEnabled: false },
+    { fileName: "tardeo mica marquez-web-h264.mp4", audioEnabled: false },
+    { fileName: "tardeo tomi lujan-web-h264.mp4", audioEnabled: false },
   ]),
   createTardeoMediaRow(2, [
-    { fileName: "Copia de max carra tardeo.mp4", audioEnabled: true },
-    { fileName: "tardeo early.mp4", audioEnabled: false },
-    { fileName: "tardeo final.mp4", audioEnabled: false },
+    { fileName: "Copia de max carra tardeo-web-h264.mp4", audioEnabled: true },
+    { fileName: "tardeo early-web-h264.mp4", audioEnabled: false },
+    { fileName: "tardeo final-web-h264.mp4", audioEnabled: false },
   ]),
 ];
 

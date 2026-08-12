@@ -21,22 +21,24 @@ describe("portfolio client Storage paths", () => {
     const sistemasMoviles = getClientBySlug("sistemas-moviles");
     const maja = getClientBySlug("maja");
     const systemsReplacement = sistemasMoviles.projects.find(
-      (project) => project.src.includes("0810(1).mp4"),
+      (project) => project.src.includes("0810(1)-web-h264.mp4"),
     );
     const majaReplacement = maja.projects.find((project) =>
-      project.src.includes("copy_23CA139B-41CF-4ED6-8F98-FAC3BB8634F4.mov"),
+      project.src.includes(
+        "copy_23CA139B-41CF-4ED6-8F98-FAC3BB8634F4-web-h264.mp4",
+      ),
     );
 
     expect(systemsReplacement).toMatchObject(
       {
-        src: "sistemas-moviles/videos/0810(1).mp4",
+        src: "sistemas-moviles/videos/0810(1)-web-h264.mp4",
         width: 720,
         height: 1280,
       },
     );
     expect(majaReplacement).toMatchObject(
       {
-        src: "maja/videos/copy_23CA139B-41CF-4ED6-8F98-FAC3BB8634F4.mov",
+        src: "maja/videos/copy_23CA139B-41CF-4ED6-8F98-FAC3BB8634F4-web-h264.mp4",
         width: 1080,
         height: 1920,
       },

@@ -61,6 +61,24 @@ function mockIntersectionObserver() {
   return instances;
 }
 
+function collectVideoSources(value) {
+  if (Array.isArray(value)) {
+    return value.flatMap(collectVideoSources);
+  }
+
+  if (!value || typeof value !== "object") {
+    return [];
+  }
+
+  const ownSource =
+    value.type === "video" && typeof value.src === "string" ? [value.src] : [];
+  const nestedSources = Object.entries(value)
+    .filter(([key]) => key !== "src")
+    .flatMap(([, nestedValue]) => collectVideoSources(nestedValue));
+
+  return [...ownSource, ...nestedSources];
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
   delete document.fonts;
@@ -146,6 +164,49 @@ describe("portfolio routes", () => {
     ]);
     expect(document.querySelectorAll(".client-card")).toHaveLength(9);
     expect(document.body).not.toHaveTextContent(/CLIENTE PENDIENTE|ASSET PENDIENTE/);
+  });
+
+  it("uses the web H.264 routes for every converted fallback video", () => {
+    const expectedSources = [
+      "desnac/videos/apps desnac 2-web-h264.mp4",
+      "desnac/videos/Copia de IMG_6492-web-h264.mp4",
+      "desnac/videos/Copia de power bi-web-h264.mp4",
+      "maja/videos/copy_349D56FE-B414-4951-96AF-7B78D52889BF-web-h264.mp4",
+      "maja/videos/copy_75EBDB0E-FA48-4E6B-8826-7A4370218237-web-h264.mp4",
+      "maja/videos/copy_b0a4a16b55120efed5db24eb404cc356-web-h264.mp4",
+      "maja/videos/copy_23CA139B-41CF-4ED6-8F98-FAC3BB8634F4-web-h264.mp4",
+      "rambla/videos/Copia de copy_B191B18E-8D69-40E0-B36C-61C96D1EA930-web-h264.mp4",
+      "rambla/videos/Copia de rambla 2.0-web-h264.mp4",
+      "rambla/videos/Copia de Rambla godere video 1-web-h264.mp4",
+      "rambla/videos/Copia de video rejunte 1-web-h264.mp4",
+      "sistemas-moviles/videos/0810(1)-web-h264.mp4",
+      "sistemas-moviles/videos/Copia de sistemas hik vision-web-h264.mp4",
+      "tardeo/edicion 1/fila 1/club tardeo max carra-web-h264.mp4",
+      "tardeo/edicion 1/fila 1/jaime tardeo-web-h264.mp4",
+      "tardeo/edicion 1/fila 1/la vuelta banda tardeo-web-h264.mp4",
+      "tardeo/edicion 1/fila 1/mati marquez tardeo-web-h264.mp4",
+      "tardeo/edicion 1/fila 1/tardeo mica marquez-web-h264.mp4",
+      "tardeo/edicion 1/fila 1/tardeo tomi lujan-web-h264.mp4",
+      "tardeo/edicion 1/fila 2/Copia de max carra tardeo-web-h264.mp4",
+      "tardeo/edicion 1/fila 2/tardeo early-web-h264.mp4",
+      "tardeo/edicion 1/fila 2/tardeo final-web-h264.mp4",
+    ];
+    const convertedSources = [
+      "desnac",
+      "maja",
+      "rambla",
+      "sistemas-moviles",
+      "tardeo",
+    ]
+      .flatMap((slug) => collectVideoSources(getClientBySlug(slug)))
+      .filter((source) => source !== "rambla/stories/historias rambla.mp4");
+
+    expect([...new Set(convertedSources)].sort()).toEqual(expectedSources.sort());
+    expect(getClientBySlug("rambla").projects).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ src: "rambla/stories/historias rambla.mp4" }),
+      ]),
+    );
   });
 
   it("uses one non-overlapping Network title treatment everywhere", async () => {
@@ -1076,9 +1137,9 @@ describe("portfolio routes", () => {
         source.getAttribute("src"),
       ),
     ).toEqual([
-      portfolioMediaUrl("desnac/videos/apps desnac 2.mov"),
-      portfolioMediaUrl("desnac/videos/Copia de IMG_6492.MOV"),
-      portfolioMediaUrl("desnac/videos/Copia de power bi .mov"),
+      portfolioMediaUrl("desnac/videos/apps desnac 2-web-h264.mp4"),
+      portfolioMediaUrl("desnac/videos/Copia de IMG_6492-web-h264.mp4"),
+      portfolioMediaUrl("desnac/videos/Copia de power bi-web-h264.mp4"),
     ]);
   });
 

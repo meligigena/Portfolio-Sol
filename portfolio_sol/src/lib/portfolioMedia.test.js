@@ -38,17 +38,17 @@ describe("portfolioMediaUrl", () => {
     vi.stubEnv("VITE_SUPABASE_URL", "https://project-ref.supabase.co");
 
     const systemsUrl = portfolioMediaUrl(
-      "sistemas-moviles/videos/0810(1).mp4",
+      "sistemas-moviles/videos/0810(1)-web-h264.mp4",
     );
     const majaUrl = portfolioMediaUrl(
-      "maja/videos/copy_23CA139B-41CF-4ED6-8F98-FAC3BB8634F4.mov",
+      "maja/videos/copy_23CA139B-41CF-4ED6-8F98-FAC3BB8634F4-web-h264.mp4",
     );
 
     expect(systemsUrl).toBe(
-      "https://project-ref.supabase.co/storage/v1/object/public/portfolio-media/sistemas-moviles/videos/0810(1).mp4",
+      "https://project-ref.supabase.co/storage/v1/object/public/portfolio-media/sistemas-moviles/videos/0810(1)-web-h264.mp4",
     );
     expect(majaUrl).toBe(
-      "https://project-ref.supabase.co/storage/v1/object/public/portfolio-media/maja/videos/copy_23CA139B-41CF-4ED6-8F98-FAC3BB8634F4.mov",
+      "https://project-ref.supabase.co/storage/v1/object/public/portfolio-media/maja/videos/copy_23CA139B-41CF-4ED6-8F98-FAC3BB8634F4-web-h264.mp4",
     );
     expect(systemsUrl).not.toContain("/public/portfolio/");
     expect(majaUrl).not.toContain("/public/portfolio/");
@@ -64,11 +64,13 @@ describe("portfolioMediaUrl", () => {
   it("does not keep local copies of the two replaced videos", () => {
     expect(
       existsSync(
-        "public/portfolio/maja/videos/copy_23CA139B-41CF-4ED6-8F98-FAC3BB8634F4.mov",
+        "public/portfolio/maja/videos/copy_23CA139B-41CF-4ED6-8F98-FAC3BB8634F4-web-h264.mp4",
       ),
     ).toBe(false);
     expect(
-      existsSync("public/portfolio/sistemas moviles/videos/0810(1).mp4"),
+      existsSync(
+        "public/portfolio/sistemas moviles/videos/0810(1)-web-h264.mp4",
+      ),
     ).toBe(false);
   });
 });
