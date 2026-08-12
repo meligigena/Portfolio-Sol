@@ -14,7 +14,7 @@ import {
 import { FileDropzone } from "./FileDropzone";
 
 const IMAGE_ACCEPT = ".jpg,.jpeg,.png,.webp";
-const VIDEO_ACCEPT = ".mp4,.webm,.mov";
+const VIDEO_ACCEPT = ".mp4";
 const CUSTOM_ACCEPT = `${IMAGE_ACCEPT},${VIDEO_ACCEPT}`;
 
 function Section({ actions = null, children, title }) {

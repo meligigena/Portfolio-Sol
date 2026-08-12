@@ -36,6 +36,7 @@ export function PortfolioRail() {
             {clients.map((client, index) => (
               <article
                 className="client-card"
+                data-client-card
                 key={client.slug}
               >
                 <Link

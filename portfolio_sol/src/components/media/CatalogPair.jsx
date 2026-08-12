@@ -90,7 +90,7 @@ export function CatalogPair({ items }) {
               key={catalog.id}
             >
               <div className="catalog-pair__pages">
-                {catalog.pages.map((page, pageIndex) => (
+                {catalog.pages.map((page) => (
                   <figure
                     className="catalog-pair__page"
                     data-catalog-page
@@ -100,7 +100,7 @@ export function CatalogPair({ items }) {
                       alt={page.alt}
                       decoding="async"
                       height={page.height}
-                      loading={pageIndex === 0 ? "eager" : "lazy"}
+                      loading="lazy"
                       src={portfolioMediaUrl(page.src)}
                       width={page.width}
                     />

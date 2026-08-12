@@ -5,7 +5,56 @@ import {
 } from "./portfolioAdminService";
 import { createEmptyAdminDraft } from "./adminDraft";
 
+function incompatibleVideo() {
+  const box = (type, payload = new Uint8Array()) => {
+    const result = new Uint8Array(8 + payload.length);
+    new DataView(result.buffer).setUint32(0, result.length);
+    result.set([...type].map((character) => character.charCodeAt(0)), 4);
+    result.set(payload, 8);
+    return result;
+  };
+  const ftyp = box("ftyp", new TextEncoder().encode("isom0000isom"));
+  const moov = box("moov", box("hvc1", new Uint8Array(32)));
+  const mdat = box("mdat", new Uint8Array(8));
+  const bytes = new Uint8Array([...ftyp, ...moov, ...mdat]);
+  return new File([bytes], "hevc.mp4", { type: "video/mp4" });
+}
+
 describe("admin destructive operations", () => {
+  it("blocks an incompatible video before any Storage upload", async () => {
+    const upload = vi.fn();
+    const client = {
+      storage: { from: vi.fn(() => ({ upload, remove: vi.fn() })) },
+    };
+    const service = createPortfolioAdminService(client);
+    const file = incompatibleVideo();
+    const draft = {
+      ...createEmptyAdminDraft(),
+      id: "client-id",
+      slug: "example",
+      storagePrefix: "example",
+      name: "Example",
+      year: "2026",
+      discipline: "Design",
+      videos: [
+        {
+          id: "new-video",
+          existing: false,
+          removed: false,
+          file,
+          name: file.name,
+          type: "video",
+          mimeType: file.type,
+          width: 1080,
+          height: 1920,
+        },
+      ],
+    };
+
+    await expect(service.saveClient(draft)).rejects.toThrow("HEVC/H.265");
+    expect(upload).not.toHaveBeenCalled();
+  });
+
   it("uploads new media under the canonical storagePrefix with explicit options", async () => {
     const upload = vi.fn().mockResolvedValue({ error: null });
     const remove = vi.fn().mockResolvedValue({ error: null });

@@ -46,6 +46,10 @@ export function About({ content: contentProp }) {
             className="about__portrait-image"
             src="/fotografia_personal.jpeg"
             alt="Sol Fanara"
+            width="2208"
+            height="1242"
+            loading="lazy"
+            decoding="async"
           />
         </figure>
 

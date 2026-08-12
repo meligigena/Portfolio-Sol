@@ -10,7 +10,7 @@ import {
   IMAGE_MIME_TYPES,
   safeStorageFileName,
   slugifyClientName,
-  validateFiles,
+  validateFilesForUpload,
   VIDEO_MIME_TYPES,
 } from "./adminValidation";
 
@@ -148,7 +148,7 @@ export function createPortfolioAdminService(
         (item) => !item.existing && !item.removed,
       );
       const newFiles = [draft.logo?.file ?? draft.logo, ...newItems.map((item) => item.file)].filter(Boolean);
-      const fileErrors = validateFiles(newFiles, [
+      const fileErrors = await validateFilesForUpload(newFiles, [
         ...IMAGE_MIME_TYPES,
         ...VIDEO_MIME_TYPES,
       ]);

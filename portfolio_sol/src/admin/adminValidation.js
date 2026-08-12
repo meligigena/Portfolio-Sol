@@ -1,3 +1,5 @@
+import { validateVideoCompatibility } from "./videoCompatibility";
+
 export const MAX_FILE_BYTES = 50 * 1024 * 1024;
 
 export const IMAGE_MIME_TYPES = [
@@ -6,11 +8,7 @@ export const IMAGE_MIME_TYPES = [
   "image/webp",
 ];
 
-export const VIDEO_MIME_TYPES = [
-  "video/mp4",
-  "video/webm",
-  "video/quicktime",
-];
+export const VIDEO_MIME_TYPES = ["video/mp4"];
 
 const FILE_TOO_LARGE_MESSAGE =
   "El archivo supera el máximo permitido de 50 MB. Reducí su tamaño antes de volver a intentarlo.";
@@ -72,6 +70,19 @@ export function validateFiles(files, allowedMimeTypes) {
 
     return [];
   });
+}
+
+export async function validateFilesForUpload(files, allowedMimeTypes) {
+  const basicErrors = validateFiles(files, allowedMimeTypes);
+  if (basicErrors.length > 0) return basicErrors;
+
+  for (const file of files) {
+    if (!file.type.startsWith("video/")) continue;
+    const message = await validateVideoCompatibility(file);
+    if (message) return [{ file, message }];
+  }
+
+  return [];
 }
 
 export function assertSafeClientSlug(slug) {

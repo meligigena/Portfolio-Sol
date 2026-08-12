@@ -1,5 +1,5 @@
 import { StrictMode, useState } from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { portfolioMediaUrl } from "../lib/portfolioMedia";
 import { createEmptyAdminDraft } from "./adminDraft";
@@ -21,6 +21,22 @@ function DropzoneHarness({ initialItems = [], mediaKind = "post", multiple = tru
       onChange={setItems}
     />
   );
+}
+
+function mp4Video(codec) {
+  const encodeBox = (type, payload = new Uint8Array()) => {
+    const box = new Uint8Array(8 + payload.length);
+    new DataView(box.buffer).setUint32(0, box.length);
+    box.set([...type].map((character) => character.charCodeAt(0)), 4);
+    box.set(payload, 8);
+    return box;
+  };
+  const ftyp = encodeBox("ftyp", new TextEncoder().encode("isom0000isomavc1"));
+  const moov = encodeBox("moov", encodeBox(codec, new Uint8Array(32)));
+  const mdat = encodeBox("mdat", new Uint8Array(8));
+  return new File([new Uint8Array([...ftyp, ...moov, ...mdat])], "nuevo.mp4", {
+    type: "video/mp4",
+  });
 }
 
 describe("FileDropzone previews", () => {
@@ -180,4 +196,24 @@ describe("FileDropzone previews", () => {
       );
     },
   );
+
+  it("shows the HEVC explanation and never adds an incompatible video", async () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <FileDropzone
+        accept=".mp4"
+        allowedMimeTypes={["video/mp4"]}
+        items={[]}
+        mediaKind="video"
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.change(container.querySelector('input[type="file"]'), {
+      target: { files: [mp4Video("hvc1")] },
+    });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("HEVC/H.265");
+    await waitFor(() => expect(onChange).not.toHaveBeenCalled());
+  });
 });

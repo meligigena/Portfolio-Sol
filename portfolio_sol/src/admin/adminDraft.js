@@ -181,8 +181,8 @@ export function createPendingItem(file, mediaKind, metadata = {}) {
     mimeType: file.type,
     type: resolvedKind,
     alt: "",
-    width: 1080,
-    height: isVertical ? 1920 : 1350,
+    width: metadata.width ?? 1080,
+    height: metadata.height ?? (isVertical ? 1920 : 1350),
     presentation:
       resolvedKind === "story"
         ? "phone"

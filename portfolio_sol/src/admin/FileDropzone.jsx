@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { portfolioMediaUrl } from "../lib/portfolioMedia";
 import { createPendingItem } from "./adminDraft";
-import { validateFiles } from "./adminValidation";
+import { validateFiles, validateFilesForUpload } from "./adminValidation";
+import { inspectMp4Video } from "./videoCompatibility";
 
 function PendingPreview({ file, kind }) {
   const previewRef = useRef(null);
@@ -60,6 +61,18 @@ export function FileDropzone({
 }) {
   const inputRef = useRef(null);
   const [error, setError] = useState("");
+  const [validating, setValidating] = useState(false);
+
+  const addPendingFiles = (files, details = []) => {
+    const pending = files.map((file, index) =>
+      createPendingItem(file, mediaKind, {
+        ...pendingItemMetadata,
+        width: details[index]?.width,
+        height: details[index]?.height,
+      }),
+    );
+    onChange(multiple ? [...items, ...pending] : pending.slice(0, 1));
+  };
 
   const addFiles = (fileList) => {
     const files = [...fileList];
@@ -70,10 +83,28 @@ export function FileDropzone({
     }
 
     setError("");
-    const pending = files.map((file) =>
-      createPendingItem(file, mediaKind, pendingItemMetadata),
-    );
-    onChange(multiple ? [...items, ...pending] : pending.slice(0, 1));
+    if (!files.some((file) => file.type.startsWith("video/"))) {
+      addPendingFiles(files);
+      return;
+    }
+
+    setValidating(true);
+    void validateFilesForUpload(files, allowedMimeTypes)
+      .then((videoErrors) => {
+        if (videoErrors.length > 0) {
+          setError(videoErrors[0].message);
+          return;
+        }
+        return Promise.all(files.map((file) => inspectMp4Video(file))).then(
+          (details) => addPendingFiles(files, details),
+        );
+      })
+      .catch(() => {
+        setError(
+          "No se pudo inspeccionar el codec de este video. Exportalo como MP4 H.264 antes de subirlo.",
+        );
+      })
+      .finally(() => setValidating(false));
   };
 
   const removeItem = (index) => {
@@ -119,8 +150,15 @@ export function FileDropzone({
           type="file"
         />
         <p>Arrastrá archivos acá o usá el selector.</p>
-        <button onClick={() => inputRef.current?.click()} type="button">
-          Seleccionar archivos
+        {allowedMimeTypes.includes("video/mp4") && (
+          <p>Videos: MP4 con H.264, audio AAC, yuv420p y faststart.</p>
+        )}
+        <button
+          disabled={validating}
+          onClick={() => inputRef.current?.click()}
+          type="button"
+        >
+          {validating ? "Verificando video…" : "Seleccionar archivos"}
         </button>
       </div>
       {error && <p className="admin-error" role="alert">{error}</p>}

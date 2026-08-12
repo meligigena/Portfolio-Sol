@@ -253,6 +253,7 @@
   .portfolio-rail__header h2 {
     margin-top: 1.5rem;
     font-size: 12vw;
+    line-height: 0.88;
   }
 
   .client-card__preview {

@@ -50,6 +50,8 @@ export function ProjectMedia({ project, index }) {
               alt=""
               width="360"
               height="722"
+              loading="lazy"
+              decoding="async"
               aria-hidden="true"
             />
           </div>
