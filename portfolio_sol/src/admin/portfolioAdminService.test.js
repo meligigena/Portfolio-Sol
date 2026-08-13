@@ -9,7 +9,9 @@ import {
   createPendingEdition,
   createPendingEditionSection,
   createPendingItem,
+  moveAdminMediaItem,
 } from "./adminDraft";
+import { mapPortfolioRowsToClients } from "../data/portfolioDatabase";
 
 function incompatibleVideo() {
   const box = (type, payload = new Uint8Array()) => {
@@ -40,6 +42,84 @@ function compatibleVideo() {
   return new File([new Uint8Array([...ftyp, ...moov, ...mdat])], "companion.mp4", {
     type: "video/mp4",
   });
+}
+
+function databaseUuid(value) {
+  return `00000000-0000-4000-8000-${String(value).padStart(12, "0")}`;
+}
+
+function relationalMediaItem(editionNumber, sectionType, index) {
+  const letter = String.fromCharCode(97 + index);
+  const isStory = sectionType === "storySequence";
+  const sectionOffset = isStory ? 100 : 0;
+  return {
+    id: databaseUuid(editionNumber * 1000 + sectionOffset + index + 1),
+    media_kind: isStory ? "story" : "video",
+    storage_path: `tardeo/edicion-${editionNumber}/${isStory ? "stories" : "posts"}/${letter}.${isStory ? "jpg" : "mp4"}`,
+    mime_type: isStory ? "image/jpeg" : "video/mp4",
+    alt_text: `${isStory ? "Story" : "Post"} ${letter.toUpperCase()}`,
+    width: 1080,
+    height: isStory ? 1920 : 1350,
+    sort_order: index,
+    audio_enabled: isStory ? null : index !== 1,
+    config: { fixture: letter },
+  };
+}
+
+function tardeoReorderDraft() {
+  const [client] = mapPortfolioRowsToClients([{
+    id: databaseUuid(9000),
+    slug: "tardeo",
+    storage_prefix: "tardeo",
+    name: "Tardeo",
+    year: "2026",
+    disciplines: ["Eventos/Entretenimiento"],
+    logo_path: "tardeo/logo.jpeg",
+    sort_order: 2,
+    published: true,
+    config: {},
+    portfolio_sections: [],
+    portfolio_editions: [1, 2].map((editionNumber) => ({
+      id: databaseUuid(editionNumber),
+      edition_key: `edicion-${editionNumber}`,
+      label: `Edicion ${editionNumber}`,
+      sort_order: editionNumber - 1,
+      coming_soon: editionNumber === 2,
+      config: {},
+      portfolio_sections: editionNumber === 1 ? [
+        {
+          id: databaseUuid(editionNumber * 10 + 1),
+          section_type: "mediaRows",
+          title: "Posts",
+          sort_order: 0,
+          config: {},
+          portfolio_media_items: [],
+          portfolio_media_groups: [{
+            id: databaseUuid(editionNumber * 100 + 1),
+            group_kind: "media_row",
+            label: "Fila 1",
+            sort_order: 0,
+            config: {},
+            portfolio_media_items: Array.from({ length: 3 }, (_, index) =>
+              relationalMediaItem(editionNumber, "mediaRows", index),
+            ),
+          }],
+        },
+        {
+          id: databaseUuid(editionNumber * 10 + 2),
+          section_type: "storySequence",
+          title: "Stories",
+          sort_order: 1,
+          config: {},
+          portfolio_media_groups: [],
+          portfolio_media_items: Array.from({ length: 3 }, (_, index) =>
+            relationalMediaItem(editionNumber, "storySequence", index),
+          ),
+        },
+      ] : [],
+    })),
+  }]);
+  return clientToAdminDraft(client);
 }
 
 describe("admin destructive operations", () => {
@@ -141,6 +221,102 @@ describe("admin destructive operations", () => {
       }),
     ]);
   });
+
+  it.each([
+    ["Posts", "mediaRows"],
+    ["Stories", "storySequence"],
+  ])(
+    "reorders persisted Tardeo %s in Edition 1 without uploads, cleanup, or duplicated media",
+    async (_label, sectionType) => {
+      const upload = vi.fn();
+      const remove = vi.fn().mockResolvedValue({ error: null });
+      const rpc = vi.fn().mockResolvedValue({ error: null });
+      const service = createPortfolioAdminService({
+        storage: { from: vi.fn(() => ({ upload, remove })) },
+        rpc,
+      });
+      const draft = tardeoReorderDraft();
+      const editionOne = draft.editionDrafts[0];
+      const editionTwoBefore = JSON.stringify(draft.editionDrafts[1]);
+      const targetSection = editionOne.sections.find(
+        (section) => section.type === sectionType,
+      );
+      const targetItems = sectionType === "mediaRows"
+        ? targetSection.groups[0].items
+        : targetSection.items;
+      const originalItems = [...targetItems];
+      const reorderedItems = moveAdminMediaItem(
+        moveAdminMediaItem(originalItems, 2, -1),
+        1,
+        -1,
+      );
+      if (sectionType === "mediaRows") targetSection.groups[0].items = reorderedItems;
+      else targetSection.items = reorderedItems;
+
+      await service.saveClient(draft);
+
+      expect(upload).not.toHaveBeenCalled();
+      expect(remove).not.toHaveBeenCalled();
+      expect(rpc).toHaveBeenCalledOnce();
+      expect(rpc.mock.calls[0][0]).toBe("admin_sync_portfolio_client");
+      expect(rpc.mock.calls[0][1].p_client_id).toBe(databaseUuid(9000));
+      expect(typeof rpc.mock.calls[0][1].p_payload).toBe("object");
+
+      const payload = rpc.mock.calls[0][1].p_payload;
+      expect(payload.editions).toHaveLength(1);
+      expect(payload.editions[0].id).toBe(databaseUuid(1));
+      expect(payload.editions.some((edition) => edition.id === databaseUuid(2))).toBe(
+        false,
+      );
+      expect(JSON.stringify(draft.editionDrafts[1])).toBe(editionTwoBefore);
+
+      const persistedSection = payload.editions[0].sections.find(
+        (section) => section.section_type === sectionType,
+      );
+      const persistedItems = sectionType === "mediaRows"
+        ? persistedSection.groups[0].items
+        : persistedSection.items;
+      const expectedOrder = [originalItems[2], originalItems[0], originalItems[1]];
+      expect(persistedItems.map((item) => item.id)).toEqual(
+        expectedOrder.map((item) => item.id),
+      );
+      expect(persistedItems.map((item) => item.storage_path)).toEqual(
+        expectedOrder.map((item) => item.storagePath),
+      );
+      expect(persistedItems.map((item) => item.media_kind)).toEqual(
+        expectedOrder.map((item) => item.type),
+      );
+      expect(persistedItems.map((item) => item.audio_enabled)).toEqual(
+        expectedOrder.map((item) =>
+          item.type === "video" ? item.audioEnabled !== false : null,
+        ),
+      );
+      expect(new Set(persistedItems.map((item) => item.id)).size).toBe(3);
+      expect([...persistedItems.map((item) => item.id)].sort()).toEqual(
+        [...originalItems.map((item) => item.id)].sort(),
+      );
+      const uuidIds = payload.editions.flatMap((edition) => [
+        edition.id,
+        ...edition.sections.flatMap((section) => [
+          section.id,
+          ...section.groups.flatMap((group) => [
+            group.id,
+            ...group.items.map((item) => item.id),
+          ]),
+          ...section.items.map((item) => item.id),
+        ]),
+      ]).filter(Boolean);
+      expect(uuidIds.every((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id))).toBe(true);
+      expect(uuidIds.every((id) => !id.includes("-row-"))).toBe(true);
+      if (sectionType === "mediaRows") {
+        expect(targetSection.groups[0]).toMatchObject({
+          id: databaseUuid(101),
+          existing: true,
+        });
+        expect(persistedSection.groups[0].id).toBe(databaseUuid(101));
+      }
+    },
+  );
 
   it("does not upload or replace Database rows when an existing draft is unchanged", async () => {
     const upload = vi.fn();

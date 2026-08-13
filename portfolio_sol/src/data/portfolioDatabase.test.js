@@ -277,6 +277,9 @@ describe("portfolio database mapping", () => {
     ]);
     expect(client.editions.map((edition) => edition.sortOrder)).toEqual([0, 1]);
     expect(client.editions[0].content[0].type).toBe("mediaRows");
+    expect(client.editions[0].content[0].rowGroups).toEqual([
+      { id: "row-1", label: "Fila 1", config: {} },
+    ]);
     expect(client.editions[1].comingSoon).toBe(true);
   });
 

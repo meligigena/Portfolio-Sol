@@ -129,6 +129,11 @@ function mapSection(section) {
         .map(mapMediaItem)
         .filter((item) => Boolean(item.src)),
     ).filter((row) => row.length > 0);
+    block.rowGroups = groups.map((group) => ({
+      id: group.id,
+      label: group.label,
+      config: group.config ?? {},
+    }));
   } else if (
     section.section_type === "carouselPairs" ||
     section.section_type === "catalogPair"

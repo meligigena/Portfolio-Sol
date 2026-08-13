@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { portfolioMediaUrl } from "../lib/portfolioMedia";
-import { createPendingItem } from "./adminDraft";
+import { createPendingItem, moveAdminMediaItem } from "./adminDraft";
 import {
   VIDEO_UPLOAD_HELP,
   validateFiles,
@@ -153,11 +153,8 @@ export function FileDropzone({
   };
 
   const moveItem = (index, offset) => {
-    const nextIndex = index + offset;
-    if (nextIndex < 0 || nextIndex >= items.length) return;
-    const next = [...items];
-    [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
-    onChange(next);
+    const next = moveAdminMediaItem(items, index, offset);
+    if (next !== items) onChange(next);
   };
 
   return (
@@ -203,7 +200,7 @@ export function FileDropzone({
       {items.length > 0 && (
         <div className="admin-media-list">
           {items.map((item, index) => (
-            <div className="admin-media-entry" key={item.id}>
+            <div className="admin-media-entry" key={item.id ?? item.tempId}>
               <ItemPreview item={item} />
               {showAudio && item.type === "video" && !item.removed && (
                 <label className="admin-check">

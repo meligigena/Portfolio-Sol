@@ -156,7 +156,10 @@ function DraftGroupedUploads({ kind, section, onChange }) {
   return (
     <>
       {section.groups.map((group, groupIndex) => (
-        <div className={`admin-media-group${group.removed ? " is-removed" : ""}`} key={group.id}>
+        <div
+          className={`admin-media-group${group.removed ? " is-removed" : ""}`}
+          key={group.id ?? group.tempId}
+        >
           <div className="admin-media-group__header">
             <div>
               <h4>{group.label}</h4>
@@ -362,11 +365,12 @@ function DraftSectionEditor({ index, onChange, onMove, onRemove, section, total 
 
 function EditionEditor({ edition, onEditionChange }) {
   const activeSections = edition.sections.filter((section) => !section.removed);
-  const updateSection = (sectionId, nextSection) =>
+  const sectionIdentity = (section) => section.id ?? section.tempId;
+  const updateSection = (sectionKey, nextSection) =>
     onEditionChange({
       ...edition,
       sections: edition.sections.map((section) =>
-        section.id === sectionId ? nextSection : section,
+        sectionIdentity(section) === sectionKey ? nextSection : section,
       ),
     });
 
@@ -378,8 +382,10 @@ function EditionEditor({ edition, onEditionChange }) {
       {activeSections.map((section, index) => (
         <DraftSectionEditor
           index={index}
-          key={section.id}
-          onChange={(nextSection) => updateSection(section.id, nextSection)}
+          key={sectionIdentity(section)}
+          onChange={(nextSection) =>
+            updateSection(sectionIdentity(section), nextSection)
+          }
           onMove={(offset) => {
             const target = index + offset;
             if (target < 0 || target >= activeSections.length) return;
@@ -393,7 +399,9 @@ function EditionEditor({ edition, onEditionChange }) {
               ],
             });
           }}
-          onRemove={() => updateSection(section.id, markSectionRemoved(section, true))}
+          onRemove={() =>
+            updateSection(sectionIdentity(section), markSectionRemoved(section, true))
+          }
           section={section}
           total={activeSections.length}
         />
@@ -401,10 +409,12 @@ function EditionEditor({ edition, onEditionChange }) {
       {edition.sections
         .filter((section) => section.removed)
         .map((section) => (
-          <div className="admin-notice" key={section.id}>
+          <div className="admin-notice" key={sectionIdentity(section)}>
             <span>{section.title || "Sección personalizada"} se eliminará al confirmar.</span>
             <button
-              onClick={() => updateSection(section.id, markSectionRemoved(section, false))}
+              onClick={() =>
+                updateSection(sectionIdentity(section), markSectionRemoved(section, false))
+              }
               type="button"
             >
               Conservar sección

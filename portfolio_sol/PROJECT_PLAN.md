@@ -1,6 +1,6 @@
 # Portfolio Sol Fanara - Plan y estado del proyecto
 
-Ultima actualizacion: 2026-08-11
+Ultima actualizacion: 2026-08-13
 Estado: los 144 assets modelados usan Supabase Storage sin fallbacks locales. Auth + Admin + Database están aplicados; Sobre mí se lee y edita desde Supabase Database.
 Fuente de verdad operativa: `PROJECT_CONTEXT.md` prevalece si hay diferencias; este archivo resume plan, estado y proximos pasos.
 
@@ -609,3 +609,16 @@ Completar la activación de clientes desde Database y retirar el fallback tempor
 - [x] Aplicar hover rojo/verde sólo a la barra compartida del Admin y a punteros precisos.
 - [x] Refrescar el trigger de Contacto sólo cuando su posición cambie por contenido superior asíncrono.
 - [x] Diferenciar Cancelar con rojo `#c62828`, sin reutilizar el bordó de identidad.
+
+## 24. Diagnóstico — reordenamiento de media en ediciones
+
+- [x] Confirmar que `/admin` usa `admin_sync_portfolio_client` para clientes con `portfolio_editions` y conserva `admin_replace_portfolio_client` para clientes sin ediciones.
+- [x] Verificar que reordenar Posts o Stories persistidos envía los mismos IDs y `storage_path`, sin uploads, cleanup ni duplicados, y omite ediciones sin cambios.
+- [x] Agregar regresiones A,B,C → C,A,B para Posts y Stories de Tardeo, con Edición 2 como control.
+- [x] Confirmar mediante `migration list --linked` que `20260813150000_incremental_portfolio_editions.sql` no está aplicada remotamente.
+- [x] Aplicar `20260813150000_incremental_portfolio_editions.sql` y `20260813170000_nullable_portfolio_client_logo.sql` al proyecto remoto tras verificar que la segunda sólo elimina `NOT NULL` de `portfolio_clients.logo_path`.
+- [x] Verificar remotamente el RPC y persistir A,B,C → C,A,B en Posts y Stories de Tardeo, preservando los 16 IDs/rutas, Edición 2 y los logos de los nueve clientes.
+- [x] Corregir la hidratación de `mediaRows`: conservar `portfolio_media_groups.id` en `rowGroups`, separar UUID persistido (`id`) de identidad local (`tempId`) y evitar IDs sintéticos en el payload RPC.
+- [x] Restaurar los órdenes remotos exactos anteriores a la prueba: Posts `club → jaime → la vuelta` y Stories `92 → 93 → 94`, verificados mediante relectura.
+- [x] Detectar dos servidores Vite simultáneos en 5173/5174 y reiniciar una única instancia limpia desde `portfolio_sol` en `127.0.0.1:5173` para descartar estado de draft preservado por HMR.
+- [x] Compartir `moveAdminMediaItem()` entre `FileDropzone` y la regresión integral para atravesar el mismo handler de reorder de la UI.

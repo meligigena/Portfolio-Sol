@@ -227,7 +227,7 @@ export function createPortfolioAdminService(
         }
         newItems.forEach((item) => {
           uploadJobs.push({
-            id: item.id,
+            id: item.tempId,
             file: item.file,
             path: storagePathForItem(storagePrefix, itemFolder(item, draft), item),
             category: itemFolder(item, draft).split("/")[0],

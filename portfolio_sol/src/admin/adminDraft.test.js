@@ -251,6 +251,13 @@ describe("admin CRUD payloads", () => {
 
     expect(migration).toContain("admin_sync_portfolio_client");
     expect(migration).toContain("edition_payload ->> 'id'");
+    expect(migration).toMatch(
+      /where item\.id = \(item_payload ->> 'id'\)::uuid[\s\S]*and item\.section_id = target_section_id/i,
+    );
+    expect(migration).toMatch(
+      /update public\.portfolio_media_items[\s\S]*sort_order = item_order[\s\S]*where id = target_item_id/i,
+    );
+    expect(migration).toContain("not (id = any(kept_item_ids))");
     expect(migration).not.toMatch(/delete from public\.portfolio_editions/i);
     expect(migration).not.toMatch(/disable row level security/i);
   });
@@ -579,6 +586,76 @@ describe("admin CRUD payloads", () => {
         ...(section.groups ?? []).flatMap((group) => group.items),
       ]),
     ).toHaveLength(3);
+  });
+
+  it("keeps persisted media-row UUIDs separate from local identities", () => {
+    const sectionId = "d860bf89-2c54-4c37-b82e-e3ebfbd3156b";
+    const groupId = "752f601e-9d91-4c15-83dd-49be4a8ab1af";
+    const draft = clientToAdminDraft({
+      id: "cbd1969e-ca34-4b87-b0a6-372376e729bc",
+      slug: "tardeo",
+      storagePrefix: "tardeo",
+      name: "Tardeo",
+      year: "2026",
+      disciplines: ["Eventos/Entretenimiento"],
+      cover: "tardeo/logo.jpeg",
+      content: [],
+      editions: [{
+        id: "edicion-1",
+        databaseId: "aef84f7f-8649-419b-bb89-2f19d109a74d",
+        editionKey: "edicion-1",
+        label: "Edición 1",
+        sortOrder: 0,
+        content: [{
+          id: sectionId,
+          type: "mediaRows",
+          title: "Posts",
+          rows: [[{
+            id: "0b49025f-a32d-46d8-8784-55860d7bd126",
+            type: "video",
+            src: "tardeo/edicion 1/fila 1/one.mp4",
+          }]],
+          rowGroups: [{ id: groupId, label: "Fila 1", config: {} }],
+        }],
+      }],
+    });
+
+    expect(draft.editionDrafts[0].sections[0].groups[0]).toMatchObject({
+      id: groupId,
+      tempId: null,
+      existing: true,
+    });
+    expect(buildClientPayload(draft).editions[0].sections[0].groups[0].id).toBe(
+      groupId,
+    );
+  });
+
+  it("uses a tempId for a new media row and never serializes it as a UUID", () => {
+    const section = createPendingEditionSection("mediaRows");
+    const group = createPendingGroup("row", 0);
+    group.items.push(existingItem(
+      "0b49025f-a32d-46d8-8784-55860d7bd126",
+      "video",
+      "tardeo/edicion 1/fila 1/one.mp4",
+    ));
+    section.groups.push({ ...group, kind: "media_row" });
+    const edition = createPendingEdition();
+    edition.sections.push(section);
+    const draft = {
+      ...createEmptyAdminDraft(),
+      name: "Tardeo",
+      year: "2026",
+      discipline: "Eventos/Entretenimiento",
+      existingLogoPath: "tardeo/logo.jpeg",
+      usesEditions: true,
+      editionDrafts: [edition],
+    };
+
+    expect(group.id).toBeNull();
+    expect(group.tempId).toMatch(/^row-/);
+    const serializedGroup = buildClientPayload(draft).editions[0].sections[0].groups[0];
+    expect(serializedGroup.id).toBeUndefined();
+    expect(serializedGroup).not.toHaveProperty("tempId");
   });
 
   it("hydrates and persists the Rambla story companion audio setting", () => {

@@ -104,6 +104,7 @@ function existingItem(item) {
   const normalizedAlt = normalizeAdminText(item.alt ?? "");
   return {
     id: item.id,
+    tempId: null,
     existing: true,
     removed: false,
     storagePath: item.src,
@@ -133,7 +134,8 @@ function blockItems(client, type) {
 function groupDraft(group, kind) {
   const sourceItems = kind === "catalog" ? group.pages : group.items;
   return {
-    id: group.id ?? draftId(kind),
+    id: group.id ?? null,
+    tempId: group.id ? null : draftId(kind),
     existing: true,
     removed: false,
     label: group.label,
@@ -143,7 +145,8 @@ function groupDraft(group, kind) {
 
 function editionSectionDraft(block) {
   const base = {
-    id: block.id ?? draftId("edition-section"),
+    id: block.id ?? null,
+    tempId: block.id ? null : draftId("edition-section"),
     type: block.type,
     title: normalizeAdminText(block.title ?? block.type),
     originalTitle: block.title ?? block.type,
@@ -157,11 +160,15 @@ function editionSectionDraft(block) {
 
   if (block.type === "mediaRows") {
     base.groups = (block.rows ?? []).map((items, index) => ({
-      id: `${base.id}-row-${index + 1}`,
+      id: block.rowGroups?.[index]?.id ?? null,
+      tempId: block.rowGroups?.[index]?.id
+        ? null
+        : draftId("media-row"),
       existing: true,
       removed: false,
       kind: "media_row",
-      label: `Fila ${index + 1}`,
+      label: block.rowGroups?.[index]?.label ?? `Fila ${index + 1}`,
+      config: block.rowGroups?.[index]?.config ?? {},
       items: items.map(existingItem),
     }));
   } else if (block.type === "carouselPairs" || block.type === "catalogPair") {
@@ -218,11 +225,20 @@ export function editionDraftIdentity(edition) {
   return edition.persistedId ?? edition.tempId ?? edition.editionKey;
 }
 
+export function moveAdminMediaItem(items, index, offset) {
+  const nextIndex = index + offset;
+  if (nextIndex < 0 || nextIndex >= items.length) return items;
+  const next = [...items];
+  [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+  return next;
+}
+
 export function createPendingEditionSection(type) {
   const definition = getSectionDefinitionByType(type);
 
   return {
-    id: draftId("edition-section"),
+    id: null,
+    tempId: draftId("edition-section"),
     type,
     title: type === CUSTOM_SECTION_DEFINITION.type ? "" : definition?.label ?? type,
     originalTitle: null,
@@ -346,7 +362,8 @@ export function createPendingItem(file, mediaKind, metadata = {}) {
       : mediaKind;
   const isVertical = resolvedKind === "story" || resolvedKind === "video";
   return {
-    id: draftId(resolvedKind),
+    id: null,
+    tempId: draftId(resolvedKind),
     existing: false,
     removed: false,
     file,
@@ -382,7 +399,8 @@ export function createPendingCustomSection() {
 
 export function createPendingGroup(kind, index) {
   return {
-    id: draftId(kind),
+    id: null,
+    tempId: draftId(kind),
     existing: false,
     removed: false,
     label: `${kind === "carousel" ? "Carrusel" : "Catálogo"} ${index + 1}`,
@@ -393,10 +411,10 @@ export function createPendingGroup(kind, index) {
 function serializeItem(item, resolvedPaths) {
   const storagePath = item.existing
     ? item.storagePath
-    : resolvedPaths.get(item.id);
+    : resolvedPaths.get(item.tempId);
 
   return {
-    id: item.existing ? item.id : undefined,
+    id: item.id ?? undefined,
     media_kind: item.type,
     storage_path: storagePath,
     title: item.existing ? item.originalTitle ?? item.name : item.name,
@@ -449,7 +467,7 @@ function originalText(current, original) {
 function serializeEditionSection(section, resolvedPaths) {
   const groups = active(section.groups ?? [])
     .map((group) => ({
-      id: group.existing ? group.id : undefined,
+      id: group.id ?? undefined,
       group_kind:
         group.kind ??
         (section.type === "mediaRows"
@@ -476,7 +494,7 @@ function serializeEditionSection(section, resolvedPaths) {
   }
 
   return {
-    id: section.existing ? section.id : undefined,
+    id: section.id ?? undefined,
     section_type: section.type,
     title: originalText(section.title, section.originalTitle),
     config: {
