@@ -341,7 +341,7 @@
 .admin-secondary-action,
 .admin-media-entry button,
 .admin-media-group button,
-.admin-editor__header button,
+.admin-editor__actions button,
 .admin-picker header button,
 .admin-dashboard header button,
 .admin-delete button,
@@ -487,9 +487,25 @@
   color: #fff;
 }
 
+.admin-editor__actions {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid currentColor;
+  background: var(--color-paper);
+}
+
+.admin-editor__actions > button {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 3.5rem;
+}
+
 .admin-confirm {
-  width: 100%;
-  margin-top: 2rem;
+  margin: 0;
   font-size: 1.25rem;
 }
 
@@ -565,5 +581,15 @@ button:disabled {
 
   .admin-order__controls {
     grid-column: 3;
+  }
+
+  .admin-editor__actions {
+    gap: 0.5rem;
+    padding-top: 0.5rem;
+  }
+
+  .admin-editor__actions > button {
+    min-height: 3rem;
+    padding-inline: 0.5rem;
   }
 }

@@ -1,20 +1,55 @@
-import { useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { gsap, useGSAP } from "../../animations/gsap";
 import { portfolioMediaUrl } from "../../lib/portfolioMedia";
+import { SoundToggleButton } from "./SoundToggleButton";
 import { useVideoViewportVisibility } from "./useVideoViewportVisibility";
+import { claimVideoSound, VIDEO_SOUND_OWNER_EVENT } from "./videoSound";
 
 export function StorySequence({ companionVideo = null, presentation = "singlePhone", projects }) {
   const sequenceRef = useRef(null);
+  const ownerId = useId();
+  const [soundEnabled, setSoundEnabled] = useState(false);
   const isDualPhone = presentation === "dualPhoneVideo" && Boolean(companionVideo);
+  const audioAllowed = companionVideo?.audioEnabled !== false;
 
   useVideoViewportVisibility({
     containerRef: sequenceRef,
     observeKey: companionVideo,
+    onHidden: () => setSoundEnabled(false),
     onVisible: (video) => {
-      video.muted = true;
+      video.muted = !audioAllowed || !soundEnabled;
       video.play()?.catch?.(() => {});
     },
   });
+
+  useEffect(() => {
+    const video = sequenceRef.current?.querySelector("[data-story-video-device] video");
+    if (!video) return;
+    video.muted =
+      !audioAllowed ||
+      !soundEnabled ||
+      video.dataset.viewportVisible === "false";
+  }, [audioAllowed, soundEnabled]);
+
+  useEffect(() => {
+    const releaseSound = (event) => {
+      if (event.detail?.ownerId !== ownerId) setSoundEnabled(false);
+    };
+    window.addEventListener(VIDEO_SOUND_OWNER_EVENT, releaseSound);
+    return () => window.removeEventListener(VIDEO_SOUND_OWNER_EVENT, releaseSound);
+  }, [ownerId]);
+
+  const toggleSound = () => {
+    if (!audioAllowed) return;
+    const video = sequenceRef.current?.querySelector("[data-story-video-device] video");
+    const enable = !soundEnabled && video?.dataset.viewportVisible !== "false";
+    if (enable) claimVideoSound(ownerId);
+    if (video) {
+      video.muted = !enable;
+      if (enable) video.play()?.catch?.(() => {});
+    }
+    setSoundEnabled(enable);
+  };
 
   useGSAP(
     () => {
@@ -90,11 +125,12 @@ export function StorySequence({ companionVideo = null, presentation = "singlePho
                 <div className="project-media__phone-screen">
                   <video
                     aria-label={companionVideo.alt}
+                    data-audio-enabled={audioAllowed}
                     height={companionVideo.height}
                     loop
                     muted
                     onVolumeChange={(event) => {
-                      if (!event.currentTarget.muted) {
+                      if (!audioAllowed && !event.currentTarget.muted) {
                         event.currentTarget.muted = true;
                       }
                     }}
@@ -103,6 +139,9 @@ export function StorySequence({ companionVideo = null, presentation = "singlePho
                     src={portfolioMediaUrl(companionVideo.src)}
                     width={companionVideo.width}
                   />
+                  {audioAllowed && (
+                    <SoundToggleButton enabled={soundEnabled} onClick={toggleSound} />
+                  )}
                 </div>
                 <PhoneFrame />
               </div>

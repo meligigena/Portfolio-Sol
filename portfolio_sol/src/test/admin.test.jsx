@@ -229,6 +229,57 @@ describe("private portfolio admin", () => {
     expect(catalogsHeading).toHaveTextContent("Catalogos");
   });
 
+  it.each([
+    ["create", /adir nuevo cliente/i, null],
+    ["edit", /Modificar cliente/i, /Cliente de prueba/i],
+    ["about", /Editar Sobre m/i, null],
+  ])("keeps one working Cancel action in the sticky %s form actions", async (_phase, actionName, clientName) => {
+    const user = { id: "admin-user" };
+    const client = {
+      id: "client-id",
+      slug: "cliente-de-prueba",
+      storagePrefix: "cliente-de-prueba",
+      name: "Cliente de prueba",
+      year: "2026",
+      disciplines: ["Diseño"],
+      cover: "cliente-de-prueba/logo.jpg",
+      content: [],
+      editions: [],
+    };
+    const service = createService({
+      getSession: vi.fn().mockResolvedValue({ user }),
+      isAdmin: vi.fn().mockResolvedValue(true),
+      listClients: vi.fn().mockResolvedValue([client]),
+    });
+    render(<AdminPage service={service} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: actionName }));
+    if (clientName) {
+      fireEvent.click(await screen.findByRole("button", { name: clientName }));
+    }
+
+    const cancelActions = await screen.findAllByRole("button", { name: "Cancelar" });
+    expect(cancelActions).toHaveLength(1);
+    const actions = cancelActions[0].closest(".admin-editor__actions");
+    const formHeader = actions.closest("form").querySelector(".admin-editor__header");
+    expect(actions).toBeInTheDocument();
+    expect(formHeader.nextElementSibling).toBe(actions);
+
+    fireEvent.click(cancelActions[0]);
+    expect(await screen.findByRole("button", { name: /Modificar cliente/i })).toBeInTheDocument();
+  });
+
+  it("makes the shared form actions sticky without overlaying the document flow", () => {
+    const styles = readFileSync("src/styles/admin.css", "utf8");
+    const actionsRule =
+      styles.match(/\.admin-editor__actions\s*\{[^}]+}/)?.[0] ?? "";
+
+    expect(actionsRule).toContain("position: sticky");
+    expect(actionsRule).toContain("top: 0");
+    expect(actionsRule).toContain("display: flex");
+    expect(actionsRule).toContain("background: var(--color-paper)");
+  });
+
   it("keeps the structural About subtitle out of the editor and saves variable content once", async () => {
     const user = { id: "admin-user" };
     const service = createService({
@@ -320,7 +371,7 @@ describe("private portfolio admin", () => {
     expect(screen.getByRole("heading", { level: 3, name: "Desktop / tablet grande" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 3, name: "Mobile" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /adir secci.n/i }));
-    fireEvent.change(screen.getByLabelText("Nombre de la secciÃ³n"), {
+    fireEvent.change(screen.getByLabelText("Nombre de la sección"), {
       target: { value: "Identidad visual" },
     });
 
@@ -333,5 +384,126 @@ describe("private portfolio admin", () => {
 
     expect(screen.getByText("uno.jpg")).toBeInTheDocument();
     expect(screen.getByText("dos.png")).toBeInTheDocument();
+  });
+
+  it("shows Tardeo Edition 1 posts and stories exactly once in the editor", async () => {
+    const user = { id: "admin-user" };
+    const tardeo = {
+      id: "tardeo-id",
+      slug: "tardeo",
+      storagePrefix: "tardeo",
+      name: "Tardeo",
+      year: "2026",
+      disciplines: ["Eventos/Entretenimiento"],
+      cover: "tardeo/logo.jpeg",
+      content: [],
+      editions: [
+        {
+          id: "edicion-1",
+          label: "Edición 1",
+          content: [
+            {
+              id: "posts",
+              type: "mediaRows",
+              title: "Posts",
+              rows: [
+                [
+                  {
+                    id: "row-1",
+                    type: "video",
+                    src: "tardeo/edicion 1/fila 1/one.mp4",
+                    alt: "Post fila 1",
+                    audioEnabled: false,
+                  },
+                ],
+                [
+                  {
+                    id: "row-2",
+                    type: "video",
+                    src: "tardeo/edicion 1/fila 2/two.mp4",
+                    alt: "Post fila 2",
+                    audioEnabled: true,
+                  },
+                ],
+              ],
+            },
+            {
+              id: "stories",
+              type: "storySequence",
+              title: "Stories",
+              items: [
+                {
+                  id: "story",
+                  type: "story",
+                  src: "tardeo/edicion 1/stories/one.jpg",
+                  alt: "Story Edición 1",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    const service = createService({
+      getSession: vi.fn().mockResolvedValue({ user }),
+      isAdmin: vi.fn().mockResolvedValue(true),
+      listClients: vi.fn().mockResolvedValue([tardeo]),
+    });
+    render(<AdminPage service={service} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Modificar cliente/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /Tardeo/ }));
+
+    expect(screen.getByRole("heading", { name: "Edición 1" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Fila 1" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Fila 2" })).toBeInTheDocument();
+    expect(screen.getAllByText("one.mp4")).toHaveLength(1);
+    expect(screen.getAllByText("two.mp4")).toHaveLength(1);
+    expect(screen.getAllByText("one.jpg")).toHaveLength(1);
+  });
+
+  it("shows Rambla companion preview and its persisted audio setting", async () => {
+    const user = { id: "admin-user" };
+    const rambla = {
+      id: "rambla-id",
+      slug: "rambla",
+      storagePrefix: "rambla",
+      name: "Rambla",
+      year: "2026",
+      disciplines: ["Eventos/Entretenimiento"],
+      cover: "rambla/logo.jpg",
+      content: [
+        {
+          id: "stories",
+          type: "storySequence",
+          title: "Stories",
+          presentation: "dualPhoneVideo",
+          items: [
+            { id: "story", type: "story", src: "rambla/stories/one.jpg" },
+          ],
+          companionVideo: {
+            id: "companion",
+            type: "video",
+            src: "rambla/stories/companion.mp4",
+            alt: "Video companion de Rambla",
+            audioEnabled: false,
+          },
+        },
+      ],
+      editions: [],
+    };
+    const service = createService({
+      getSession: vi.fn().mockResolvedValue({ user }),
+      isAdmin: vi.fn().mockResolvedValue(true),
+      listClients: vi.fn().mockResolvedValue([rambla]),
+    });
+    render(<AdminPage service={service} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Modificar cliente/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /Rambla/ }));
+
+    expect(screen.getByRole("heading", { name: "Video companion de Stories" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Video companion de Rambla")).toBeInTheDocument();
+    expect(screen.getByLabelText("Permitir sonido")).not.toBeChecked();
   });
 });

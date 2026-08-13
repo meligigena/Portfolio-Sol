@@ -6,6 +6,8 @@ import {
   createEmptyAdminDraft,
   createPendingGroup,
   createPendingCustomSection,
+  hasAdminDraftChanges,
+  normalizeAdminText,
 } from "./adminDraft";
 
 function existingItem(id, type, storagePath, removed = false) {
@@ -260,5 +262,151 @@ describe("admin CRUD payloads", () => {
 
     expect(buildClientPayload(emptyDraft).client.coming_soon).toBe(true);
     expect(buildClientPayload(withPost).client.coming_soon).toBe(false);
+  });
+
+  it("hydrates and serializes Tardeo edition media without duplicating it", () => {
+    const draft = clientToAdminDraft({
+      id: "tardeo-id",
+      slug: "tardeo",
+      storagePrefix: "tardeo",
+      name: "Tardeo",
+      year: "2026",
+      disciplines: ["Eventos/Entretenimiento"],
+      cover: "tardeo/logo.jpeg",
+      content: [],
+      editions: [
+        {
+          id: "edicion-1",
+          label: "Edición 1",
+          content: [
+            {
+              id: "posts",
+              type: "mediaRows",
+              title: "Posts",
+              rows: [
+                [
+                  {
+                    id: "row-1-video",
+                    type: "video",
+                    src: "tardeo/edicion 1/fila 1/one.mp4",
+                    audioEnabled: false,
+                  },
+                ],
+                [
+                  {
+                    id: "row-2-video",
+                    type: "video",
+                    src: "tardeo/edicion 1/fila 2/two.mp4",
+                    audioEnabled: true,
+                  },
+                ],
+              ],
+            },
+            {
+              id: "stories",
+              type: "storySequence",
+              title: "Stories",
+              items: [
+                {
+                  id: "story-1",
+                  type: "story",
+                  src: "tardeo/edicion 1/stories/one.jpg",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(draft.editionDrafts[0].sections[0].groups).toHaveLength(2);
+    expect(draft.editionDrafts[0].sections[0].groups[0].items[0].storagePath).toBe(
+      "tardeo/edicion 1/fila 1/one.mp4",
+    );
+    expect(draft.editionDrafts[0].sections[1].items[0].storagePath).toBe(
+      "tardeo/edicion 1/stories/one.jpg",
+    );
+    expect(hasAdminDraftChanges(draft)).toBe(false);
+
+    const [edition] = buildClientPayload(draft).editions;
+    expect(edition.sections[0].groups.map((group) => group.items.length)).toEqual([
+      1,
+      1,
+    ]);
+    expect(edition.sections[1].items).toHaveLength(1);
+    expect(
+      edition.sections.flatMap((section) => [
+        ...(section.items ?? []),
+        ...(section.groups ?? []).flatMap((group) => group.items),
+      ]),
+    ).toHaveLength(3);
+  });
+
+  it("hydrates and persists the Rambla story companion audio setting", () => {
+    const draft = clientToAdminDraft({
+      id: "rambla-id",
+      slug: "rambla",
+      storagePrefix: "rambla",
+      name: "Rambla",
+      year: "2026",
+      disciplines: ["Eventos/Entretenimiento"],
+      cover: "rambla/logo.jpg",
+      content: [
+        {
+          id: "stories",
+          type: "storySequence",
+          title: "Stories",
+          presentation: "dualPhoneVideo",
+          items: [
+            { id: "story", type: "story", src: "rambla/stories/one.jpg" },
+          ],
+          companionVideo: {
+            id: "companion",
+            type: "video",
+            src: "rambla/stories/companion.mp4",
+            audioEnabled: false,
+          },
+        },
+      ],
+      editions: [],
+    });
+
+    expect(draft.sectionConfig.storySequence.companionVideo).toMatchObject({
+      existing: true,
+      storagePath: "rambla/stories/companion.mp4",
+      audioEnabled: false,
+    });
+
+    draft.sectionConfig.storySequence.companionVideo.audioEnabled = true;
+    const storySection = buildClientPayload(draft).sections.find(
+      (section) => section.section_type === "storySequence",
+    );
+    expect(storySection.groups[0]).toMatchObject({
+      group_kind: "story_companion",
+      items: [expect.objectContaining({ audio_enabled: true })],
+    });
+  });
+
+  it("repairs known UTF-8 mojibake without changing correct Spanish text", () => {
+    expect(normalizeAdminText("CreaciÃ³n de marca")).toBe("Creación de marca");
+    expect(normalizeAdminText("Nombre de la secciÃƒÂ³n")).toBe(
+      "Nombre de la sección",
+    );
+    expect(normalizeAdminText("Edición de video")).toBe("Edición de video");
+  });
+
+  it("keeps active Admin source strings free of mojibake markers", () => {
+    const activeSources = [
+      "src/admin/adminDraft.js",
+      "src/admin/adminValidation.js",
+      "src/admin/AdminPage.jsx",
+      "src/admin/AboutEditor.jsx",
+      "src/admin/ClientEditor.jsx",
+      "src/admin/ClientOrderEditor.jsx",
+      "src/admin/FileDropzone.jsx",
+      "src/admin/portfolioAdminService.js",
+    ].map((path) => readFileSync(path, "utf8"));
+
+    activeSources.forEach((source) => expect(source).not.toMatch(/[ÃÂâ]/));
   });
 });

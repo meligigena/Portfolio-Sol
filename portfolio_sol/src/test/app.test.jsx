@@ -8,6 +8,7 @@ import { getClientBySlug } from "../data/clients";
 import { contact } from "../data/contact";
 import { portfolioMediaUrl } from "../lib/portfolioMedia";
 import { About } from "../sections/About";
+import { StorySequence } from "../components/media/StorySequence";
 
 const aboutContent = {
   profile: "PERFIL / EXPERIENCIA",
@@ -1080,6 +1081,47 @@ describe("portfolio routes", () => {
     expect(companionVideo).toHaveAttribute("playsinline");
     expect(companionVideo).toHaveAttribute("preload", "none");
     expect(storySection.querySelector(".video-sound-toggle")).not.toBeInTheDocument();
+  });
+
+  it("keeps a disabled story companion muted and exposes sound only when enabled", () => {
+    const projects = [
+      { id: "story", src: "rambla/stories/one.jpg", alt: "Story" },
+    ];
+    const companion = {
+      id: "companion",
+      type: "video",
+      src: "rambla/stories/companion.mp4",
+      alt: "Companion",
+      width: 1080,
+      height: 1920,
+      audioEnabled: false,
+    };
+    const { rerender } = render(
+      <StorySequence
+        companionVideo={companion}
+        presentation="dualPhoneVideo"
+        projects={projects}
+      />,
+    );
+    const disabledVideo = screen.getByLabelText("Companion");
+
+    expect(disabledVideo).toHaveAttribute("data-audio-enabled", "false");
+    expect(disabledVideo.muted).toBe(true);
+    expect(screen.queryByRole("button", { name: "Activar sonido" })).not.toBeInTheDocument();
+
+    rerender(
+      <StorySequence
+        companionVideo={{ ...companion, audioEnabled: true }}
+        presentation="dualPhoneVideo"
+        projects={projects}
+      />,
+    );
+    const enabledVideo = screen.getByLabelText("Companion");
+    const soundButton = screen.getByRole("button", { name: "Activar sonido" });
+
+    expect(enabledVideo.muted).toBe(true);
+    fireEvent.click(soundButton);
+    expect(enabledVideo.muted).toBe(false);
   });
 
   it("defines the approved responsive banner reveal with cleanup and reduced motion", () => {

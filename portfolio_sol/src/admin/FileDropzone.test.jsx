@@ -55,6 +55,21 @@ describe("FileDropzone previews", () => {
     vi.unstubAllGlobals();
   });
 
+  it("shows the same concise requirements in every video dropzone", () => {
+    render(
+      <FileDropzone
+        accept=".mp4"
+        allowedMimeTypes={["video/mp4"]}
+        items={[]}
+        mediaKind="video"
+        onChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Videos: MP4 en H.264 · Máximo 50 MB")).toBeInTheDocument();
+    expect(screen.queryByText(/AAC|yuv420p|faststart|avc1/)).not.toBeInTheDocument();
+  });
+
   it("keeps the committed local image preview valid in React StrictMode", () => {
     const { container } = render(
       <StrictMode>
@@ -99,6 +114,37 @@ describe("FileDropzone previews", () => {
       portfolioMediaUrl("rambla/banners/banner_horizontal.jpeg"),
     );
     expect(nextObjectUrl).not.toHaveBeenCalled();
+  });
+
+  it("shows a persisted story companion with its audio control in Admin", () => {
+    render(
+      <FileDropzone
+        accept=".mp4"
+        allowedMimeTypes={["video/mp4"]}
+        items={[
+          {
+            id: "companion",
+            existing: true,
+            removed: false,
+            storagePath: "rambla/stories/companion.mp4",
+            name: "companion.mp4",
+            type: "video",
+            alt: "Video companion de Rambla",
+            audioEnabled: false,
+          },
+        ]}
+        mediaKind="video"
+        multiple={false}
+        onChange={vi.fn()}
+        showAudio
+      />,
+    );
+
+    expect(screen.getByLabelText("Video companion de Rambla")).toHaveAttribute(
+      "src",
+      portfolioMediaUrl("rambla/stories/companion.mp4"),
+    );
+    expect(screen.getByLabelText("Permitir sonido")).not.toBeChecked();
   });
 
   it("revokes a local preview when its pending file is removed", () => {
@@ -213,7 +259,9 @@ describe("FileDropzone previews", () => {
       target: { files: [mp4Video("hvc1")] },
     });
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("HEVC/H.265");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Este video no es compatible con el portfolio. Exportalo como MP4 en H.264 e intentá nuevamente.",
+    );
     await waitFor(() => expect(onChange).not.toHaveBeenCalled());
   });
 });

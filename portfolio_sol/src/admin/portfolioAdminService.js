@@ -4,6 +4,7 @@ import { ABOUT_CONTENT_KEY, fetchAboutContent } from "../data/siteContent";
 import {
   allDraftItems,
   buildClientPayload,
+  hasAdminDraftChanges,
 } from "./adminDraft";
 import {
   assertSafeClientSlug,
@@ -26,6 +27,21 @@ function itemFolder(item, draft) {
   if (draft.posts.includes(item)) return "posts";
   if (draft.videos.includes(item)) return "videos";
   if ((draft.banners ?? []).includes(item)) return "banners";
+  if (draft.sectionConfig?.storySequence?.companionVideo === item) {
+    return "stories/companion";
+  }
+
+  for (const edition of draft.editionDrafts ?? []) {
+    for (const section of edition.sections) {
+      if (section.items?.includes(item) || section.companionVideo === item) {
+        return `ediciones/${edition.id}/${slugifyClientName(section.title)}`;
+      }
+      const group = section.groups?.find((entry) => entry.items.includes(item));
+      if (group) {
+        return `ediciones/${edition.id}/${slugifyClientName(section.title)}/${slugifyClientName(group.label)}`;
+      }
+    }
+  }
 
   const carouselIndex = draft.carousels.findIndex((group) =>
     group.items.includes(item),
@@ -142,6 +158,9 @@ export function createPortfolioAdminService(
       const storagePrefix = assertSafeClientSlug(
         draft.storagePrefix ?? slug,
       );
+      if (!isNew && !hasAdminDraftChanges(draft)) {
+        return { id: draft.id, slug, cleanupWarnings: [] };
+      }
       const resolvedPaths = new Map();
       const uploadedPaths = [];
       const newItems = allDraftItems(draft).filter(
@@ -248,6 +267,9 @@ export function createPortfolioAdminService(
           ...allDraftItems(draft)
             .filter((item) => item.existing && item.removed)
             .map((item) => item.storagePath),
+          ...allDraftItems(draft)
+            .map((item) => item.replacedStoragePath)
+            .filter(Boolean),
           ...(draft.logo && draft.existingLogoPath ? [draft.existingLogoPath] : []),
         ];
         assertScopedPaths(removedPaths, storagePrefix);

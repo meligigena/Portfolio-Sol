@@ -20,7 +20,54 @@ function incompatibleVideo() {
   return new File([bytes], "hevc.mp4", { type: "video/mp4" });
 }
 
+function compatibleVideo() {
+  const box = (type, payload = new Uint8Array()) => {
+    const result = new Uint8Array(8 + payload.length);
+    new DataView(result.buffer).setUint32(0, result.length);
+    result.set([...type].map((character) => character.charCodeAt(0)), 4);
+    result.set(payload, 8);
+    return result;
+  };
+  const ftyp = box("ftyp", new TextEncoder().encode("isom0000isomavc1"));
+  const moov = box("moov", box("avc1", new Uint8Array(32)));
+  const mdat = box("mdat", new Uint8Array(8));
+  return new File([new Uint8Array([...ftyp, ...moov, ...mdat])], "companion.mp4", {
+    type: "video/mp4",
+  });
+}
+
 describe("admin destructive operations", () => {
+  it("does not upload or replace Database rows when an existing draft is unchanged", async () => {
+    const upload = vi.fn();
+    const remove = vi.fn();
+    const rpc = vi.fn();
+    const client = {
+      storage: { from: vi.fn(() => ({ upload, remove })) },
+      rpc,
+    };
+    const service = createPortfolioAdminService(client);
+    const draft = {
+      ...createEmptyAdminDraft(),
+      id: "client-id",
+      slug: "tardeo",
+      storagePrefix: "tardeo",
+      name: "Tardeo",
+      year: "2026",
+      discipline: "Eventos/Entretenimiento",
+    };
+    draft.originalDraftSignature = JSON.stringify(
+      Object.fromEntries(
+        Object.entries(draft).filter(([key]) => key !== "originalDraftSignature"),
+      ),
+    );
+
+    await service.saveClient(draft);
+
+    expect(upload).not.toHaveBeenCalled();
+    expect(remove).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   it("blocks an incompatible video before any Storage upload", async () => {
     const upload = vi.fn();
     const client = {
@@ -51,7 +98,9 @@ describe("admin destructive operations", () => {
       ],
     };
 
-    await expect(service.saveClient(draft)).rejects.toThrow("HEVC/H.265");
+    await expect(service.saveClient(draft)).rejects.toThrow(
+      "Este video no es compatible con el portfolio. Exportalo como MP4 en H.264 e intentá nuevamente.",
+    );
     expect(upload).not.toHaveBeenCalled();
   });
 
@@ -111,6 +160,66 @@ describe("admin destructive operations", () => {
     });
     expect(rpc).toHaveBeenCalledAfter(upload);
     expect(rpc.mock.calls[0][1].p_payload.client.sort_order).toBe(0);
+  });
+
+  it("uploads a replacement story companion through the existing video pipeline", async () => {
+    const upload = vi.fn().mockResolvedValue({ error: null });
+    const remove = vi.fn().mockResolvedValue({ error: null });
+    const rpc = vi.fn().mockResolvedValue({ error: null });
+    const client = {
+      storage: { from: vi.fn(() => ({ upload, remove })) },
+      rpc,
+    };
+    const service = createPortfolioAdminService(client);
+    const file = compatibleVideo();
+    const draft = {
+      ...createEmptyAdminDraft(),
+      id: "rambla-id",
+      slug: "rambla",
+      storagePrefix: "rambla",
+      name: "Rambla",
+      year: "2026",
+      discipline: "Eventos/Entretenimiento",
+      stories: [
+        {
+          id: "story",
+          existing: true,
+          removed: false,
+          storagePath: "rambla/stories/one.jpg",
+          name: "one.jpg",
+          type: "story",
+        },
+      ],
+      sectionConfig: {
+        storySequence: {
+          presentation: "dualPhoneVideo",
+          companionVideo: {
+            id: "replacement",
+            existing: false,
+            removed: false,
+            file,
+            name: file.name,
+            mimeType: file.type,
+            type: "video",
+            width: 1080,
+            height: 1920,
+            audioEnabled: true,
+            replacedStoragePath: "rambla/stories/old-companion.mp4",
+          },
+        },
+      },
+    };
+
+    await service.saveClient(draft);
+
+    expect(upload.mock.calls[0][0]).toMatch(
+      /^rambla\/stories\/companion\/.+-companion\.mp4$/,
+    );
+    expect(remove).toHaveBeenCalledWith(["rambla/stories/old-companion.mp4"]);
+    const storySection = rpc.mock.calls[0][1].p_payload.sections.find(
+      (section) => section.section_type === "storySequence",
+    );
+    expect(storySection.groups[0].items[0].audio_enabled).toBe(true);
   });
 
   it("creates a new client row before its first Storage upload", async () => {

@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { portfolioMediaUrl } from "../lib/portfolioMedia";
 import { createPendingItem } from "./adminDraft";
-import { validateFiles, validateFilesForUpload } from "./adminValidation";
+import {
+  VIDEO_UPLOAD_HELP,
+  validateFiles,
+  validateFilesForUpload,
+} from "./adminValidation";
 import { inspectMp4Video } from "./videoCompatibility";
 
 function PendingPreview({ file, kind }) {
@@ -71,6 +75,9 @@ export function FileDropzone({
         height: details[index]?.height,
       }),
     );
+    if (!multiple && items[0]?.existing && pending[0]) {
+      pending[0].replacedStoragePath = items[0].storagePath;
+    }
     onChange(multiple ? [...items, ...pending] : pending.slice(0, 1));
   };
 
@@ -151,7 +158,7 @@ export function FileDropzone({
         />
         <p>Arrastrá archivos acá o usá el selector.</p>
         {allowedMimeTypes.includes("video/mp4") && (
-          <p>Videos: MP4 con H.264, audio AAC, yuv420p y faststart.</p>
+          <p>{VIDEO_UPLOAD_HELP}</p>
         )}
         <button
           disabled={validating}
@@ -182,7 +189,7 @@ export function FileDropzone({
                     }
                     type="checkbox"
                   />
-                  Permitir sonido
+                  <span>Permitir sonido</span>
                 </label>
               )}
               <div className="admin-media-entry__actions">

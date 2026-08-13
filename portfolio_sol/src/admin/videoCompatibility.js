@@ -3,15 +3,14 @@ const inspectionCache = new WeakMap();
 
 export const VIDEO_COMPATIBILITY_MESSAGES = {
   hevc:
-    "Este video utiliza HEVC/H.265 y puede no reproducirse correctamente en todos los dispositivos. Convertí el archivo a MP4 H.264 antes de subirlo.",
+    "Este video no es compatible con el portfolio. Exportalo como MP4 en H.264 e intentá nuevamente.",
   h264Required:
-    "No se pudo confirmar que este video utilice H.264/AVC. Exportalo como MP4 H.264 antes de subirlo.",
-  mp4Required:
-    "Los videos deben exportarse como MP4 H.264 con audio AAC antes de subirlos.",
+    "Este video no es compatible con el portfolio. Exportalo como MP4 en H.264 e intentá nuevamente.",
+  mp4Required: "El video debe estar en formato MP4.",
   aacRequired:
-    "Este video usa un audio distinto de AAC. Exportalo como MP4 H.264 con audio AAC antes de subirlo.",
+    "El audio de este video no es compatible. Volvé a exportarlo como MP4 H.264.",
   fastStartRequired:
-    "Este video no tiene faststart. Exportalo como MP4 H.264 con el inicio rápido habilitado antes de subirlo.",
+    "El archivo necesita una exportación compatible para web. Volvé a exportarlo como MP4 H.264.",
 };
 
 function readType(view, offset) {

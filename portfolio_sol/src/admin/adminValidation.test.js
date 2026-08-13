@@ -16,10 +16,15 @@ function mp4Box(type, payload = new Uint8Array()) {
   return box;
 }
 
-function videoFile({ codec = "avc1", fastStart = true, name = "video.mp4" } = {}) {
+function videoFile({
+  audioCodec = "mp4a",
+  codec = "avc1",
+  fastStart = true,
+  name = "video.mp4",
+} = {}) {
   const ftyp = mp4Box("ftyp", new TextEncoder().encode("isom0000isomavc1"));
   const sampleEntry = mp4Box(codec, new Uint8Array(32));
-  const audioEntry = mp4Box("mp4a", new Uint8Array(8));
+  const audioEntry = mp4Box(audioCodec, new Uint8Array(8));
   const moov = mp4Box("moov", new Uint8Array([...sampleEntry, ...audioEntry]));
   const mdat = mp4Box("mdat", new Uint8Array(8));
   const bytes = fastStart
@@ -65,7 +70,7 @@ describe("admin client validation", () => {
     expect(slugifyClientName("  Sistemas Móviles  ")).toBe("sistemas-moviles");
   });
 
-  it("rejects every file above the absolute 50 MB limit", () => {
+  it("explains the absolute 50 MB limit in plain language for videos", () => {
     const oversized = new File([new Uint8Array(1)], "large.mp4", {
       type: "video/mp4",
     });
@@ -74,9 +79,18 @@ describe("admin client validation", () => {
     expect(validateFiles([oversized], ["video/mp4"])).toEqual([
       {
         file: oversized,
-        message:
-          "El archivo supera el máximo permitido de 50 MB. Reducí su tamaño antes de volver a intentarlo.",
+        message: "El video supera el máximo permitido de 50 MB.",
       },
+    ]);
+  });
+
+  it("explains that an incompatible video format must be MP4", () => {
+    const mov = new File([new Uint8Array(1)], "video.mov", {
+      type: "video/quicktime",
+    });
+
+    expect(validateFiles([mov], ["video/mp4"])).toEqual([
+      { file: mov, message: "El video debe estar en formato MP4." },
     ]);
   });
 
@@ -95,7 +109,7 @@ describe("admin client validation", () => {
       {
         file,
         message:
-          "Este video utiliza HEVC/H.265 y puede no reproducirse correctamente en todos los dispositivos. Convertí el archivo a MP4 H.264 antes de subirlo.",
+          "Este video no es compatible con el portfolio. Exportalo como MP4 en H.264 e intentá nuevamente.",
       },
     ]);
   });
@@ -109,7 +123,21 @@ describe("admin client validation", () => {
       {
         file,
         message:
-          "Este video no tiene faststart. Exportalo como MP4 H.264 con el inicio rápido habilitado antes de subirlo.",
+          "El archivo necesita una exportación compatible para web. Volvé a exportarlo como MP4 H.264.",
+      },
+    ]);
+  });
+
+  it("continues rejecting incompatible audio with an actionable explanation", async () => {
+    const file = videoFile({ audioCodec: "ac-3" });
+
+    await expect(
+      validateFilesForUpload([file], ["video/mp4"]),
+    ).resolves.toEqual([
+      {
+        file,
+        message:
+          "El audio de este video no es compatible. Volvé a exportarlo como MP4 H.264.",
       },
     ]);
   });

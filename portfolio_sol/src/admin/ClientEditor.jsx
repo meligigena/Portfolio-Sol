@@ -33,7 +33,7 @@ function SectionOrderActions({ index, onMove, onRemove, total }) {
   return (
     <div className="admin-section-order-actions">
       <button
-        aria-label="Mover secciÃ³n hacia arriba"
+        aria-label="Mover sección hacia arriba"
         disabled={index === 0}
         onClick={() => onMove(-1)}
         type="button"
@@ -41,7 +41,7 @@ function SectionOrderActions({ index, onMove, onRemove, total }) {
         Subir
       </button>
       <button
-        aria-label="Mover secciÃ³n hacia abajo"
+        aria-label="Mover sección hacia abajo"
         disabled={index === total - 1}
         onClick={() => onMove(1)}
         type="button"
@@ -49,7 +49,7 @@ function SectionOrderActions({ index, onMove, onRemove, total }) {
         Bajar
       </button>
       {onRemove && (
-        <button onClick={onRemove} type="button">Eliminar secciÃ³n</button>
+        <button onClick={onRemove} type="button">Eliminar sección</button>
       )}
     </div>
   );
@@ -194,6 +194,110 @@ function BannerUploads({ draft, onDraftChange }) {
   );
 }
 
+function StoryCompanionUpload({ draft, onDraftChange }) {
+  const storyConfig = draft.sectionConfig.storySequence ?? {};
+  const companion = storyConfig.companionVideo;
+  if (!companion && storyConfig.presentation !== "dualPhoneVideo") return null;
+
+  return (
+    <div className="admin-media-group">
+      <div className="admin-media-group__header">
+        <h3>Video companion de Stories</h3>
+      </div>
+      <FileDropzone
+        accept={VIDEO_ACCEPT}
+        allowedMimeTypes={VIDEO_MIME_TYPES}
+        items={companion ? [companion] : []}
+        mediaKind="video"
+        multiple={false}
+        onChange={(items) =>
+          onDraftChange({
+            ...draft,
+            sectionConfig: {
+              ...draft.sectionConfig,
+              storySequence: {
+                ...storyConfig,
+                companionVideo: items[0] ?? null,
+              },
+            },
+          })
+        }
+        pendingItemMetadata={{ presentation: "phone" }}
+        showAudio
+      />
+    </div>
+  );
+}
+
+function EditionEditor({ draft, editionIndex, onDraftChange }) {
+  const edition = draft.editionDrafts[editionIndex];
+  const updateSection = (sectionIndex, nextSection) => {
+    onDraftChange({
+      ...draft,
+      editionDrafts: draft.editionDrafts.map((entry, index) =>
+        index === editionIndex
+          ? {
+              ...entry,
+              sections: entry.sections.map((section, currentIndex) =>
+                currentIndex === sectionIndex ? nextSection : section,
+              ),
+            }
+          : entry,
+      ),
+    });
+  };
+
+  return (
+    <section className="admin-edition" data-admin-edition={edition.id}>
+      <h2>{edition.label}</h2>
+      {edition.sections.map((section, sectionIndex) => (
+        <div className="admin-editor__section" key={section.id}>
+          <div className="admin-editor__section-header">
+            <DisplayHeading as="h3" text={section.title} />
+          </div>
+          {section.type === "mediaRows" ? (
+            section.groups.map((group, groupIndex) => (
+              <div className="admin-media-group" key={group.id}>
+                <div className="admin-media-group__header">
+                  <h4>{group.label}</h4>
+                </div>
+                <FileDropzone
+                  accept={VIDEO_ACCEPT}
+                  allowedMimeTypes={VIDEO_MIME_TYPES}
+                  items={group.items}
+                  mediaKind="video"
+                  onChange={(items) =>
+                    updateSection(sectionIndex, {
+                      ...section,
+                      groups: section.groups.map((entry, index) =>
+                        index === groupIndex ? { ...entry, items } : entry,
+                      ),
+                    })
+                  }
+                  showAudio
+                />
+              </div>
+            ))
+          ) : (
+            <FileDropzone
+              accept={section.type === "storySequence" ? IMAGE_ACCEPT : CUSTOM_ACCEPT}
+              allowedMimeTypes={
+                section.type === "storySequence"
+                  ? IMAGE_MIME_TYPES
+                  : [...IMAGE_MIME_TYPES, ...VIDEO_MIME_TYPES]
+              }
+              items={section.items}
+              mediaKind={section.type === "storySequence" ? "story" : "custom"}
+              onChange={(items) => updateSection(sectionIndex, { ...section, items })}
+              showAudio
+            />
+          )}
+        </div>
+      ))}
+    </section>
+  );
+}
+
 export function ClientEditor({ initialDraft, mode, onCancel, onSaved, service }) {
   const [draft, setDraft] = useState(initialDraft ?? createEmptyAdminDraft());
   const [errors, setErrors] = useState({});
@@ -292,6 +396,9 @@ export function ClientEditor({ initialDraft, mode, onCancel, onSaved, service })
             onChange={(items) => setDraft({ ...draft, [sectionKey]: items })}
             showAudio={direct.showAudio}
           />
+          {sectionKey === "stories" && (
+            <StoryCompanionUpload draft={draft} onDraftChange={setDraft} />
+          )}
         </Section>
       );
     }
@@ -330,10 +437,10 @@ export function ClientEditor({ initialDraft, mode, onCancel, onSaved, service })
       <Section
         actions={sectionActions(index, () => removeCustomSection(custom))}
         key={sectionKey}
-        title={custom.title || "SecciÃ³n personalizada"}
+        title={custom.title || "Sección personalizada"}
       >
         <label>
-          Nombre de la secciÃ³n
+          Nombre de la sección
           <input
             disabled={custom.removed}
             onChange={(event) => {
@@ -415,10 +522,15 @@ export function ClientEditor({ initialDraft, mode, onCancel, onSaved, service })
           <p>{editing ? "Modificar cliente" : "Nuevo cliente"}</p>
           <DisplayHeading as="h1" text={draft.name || "Cliente sin nombre"} />
         </div>
+      </header>
+      <div className="admin-editor__actions">
         <button disabled={Boolean(status)} onClick={onCancel} type="button">
           Cancelar
         </button>
-      </header>
+        <button className="admin-confirm" disabled={Boolean(status)} type="submit">
+          {status ? "Guardando…" : "Confirmar cambios"}
+        </button>
+      </div>
 
       <Section title="Datos principales">
         <div className="admin-fields">
@@ -475,14 +587,22 @@ export function ClientEditor({ initialDraft, mode, onCancel, onSaved, service })
         </div>
       </Section>
 
-      {draft.preservedEditions.length > 0 && (
+      {draft.editionDrafts.length > 0 && (
         <aside className="admin-notice">
-          Este cliente usa ediciones especiales. Su estructura y orden se conservan
-          sin convertirlos al formato estándar.
+          Este cliente usa ediciones especiales. Podés editar su contenido sin
+          convertirlo al formato estándar.
         </aside>
       )}
 
       {draft.sectionOrder.map(renderContentSection)}
+      {draft.editionDrafts.map((edition, editionIndex) => (
+        <EditionEditor
+          draft={draft}
+          editionIndex={editionIndex}
+          key={edition.id}
+          onDraftChange={setDraft}
+        />
+      ))}
       {errors.customSections && (
         <p className="admin-error">{errors.customSections}</p>
       )}
@@ -509,9 +629,6 @@ export function ClientEditor({ initialDraft, mode, onCancel, onSaved, service })
         </p>
       )}
       {saveError && <p className="admin-error" role="alert">{saveError}</p>}
-      <button className="admin-confirm" disabled={Boolean(status)} type="submit">
-        {status ? "Guardando…" : "Confirmar cambios"}
-      </button>
     </form>
   );
 }

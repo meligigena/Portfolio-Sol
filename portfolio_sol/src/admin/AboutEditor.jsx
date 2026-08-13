@@ -181,8 +181,13 @@ export function AboutEditor({ initialContent, onCancel, onSaved, service }) {
           <p>Contenido público</p>
           <DisplayHeading as="h1" text="Editar Sobre mí" />
         </div>
-        <button disabled={saving} onClick={onCancel} type="button">Cancelar</button>
       </header>
+      <div className="admin-editor__actions">
+        <button disabled={saving} onClick={onCancel} type="button">Cancelar</button>
+        <button className="admin-confirm" disabled={saving} type="submit">
+          {saving ? "Guardando…" : "Guardar cambios"}
+        </button>
+      </div>
 
       {LIST_FIELDS.map((config) => (
         <ContentList
@@ -196,9 +201,6 @@ export function AboutEditor({ initialContent, onCancel, onSaved, service }) {
       ))}
 
       {error && <p className="admin-error" role="alert">{error}</p>}
-      <button className="admin-confirm" disabled={saving} type="submit">
-        {saving ? "Guardando…" : "Guardar cambios"}
-      </button>
     </form>
   );
 }

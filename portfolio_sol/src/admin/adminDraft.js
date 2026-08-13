@@ -54,20 +54,72 @@ export function createEmptyAdminDraft() {
     customSections: [],
     sectionOrder: [...STANDARD_SECTION_KEYS],
     sectionConfig: {},
-    preservedEditions: [],
+    editionDrafts: [],
   };
 }
 
+const MOJIBAKE_MARKERS = /[\u00c3\u00c2\u00e2]/;
+const WINDOWS_1252_BYTES = new Map(
+  [
+    "€", "\u0081", "‚", "ƒ", "„", "…", "†", "‡",
+    "ˆ", "‰", "Š", "‹", "Œ", "\u008d", "Ž", "\u008f",
+    "\u0090", "‘", "’", "“", "”", "•", "–", "—",
+    "˜", "™", "š", "›", "œ", "\u009d", "ž", "Ÿ",
+  ].map((character, index) => [character, 0x80 + index]),
+);
+
+function windows1252Bytes(value) {
+  const bytes = [];
+  for (const character of value) {
+    const codePoint = character.codePointAt(0);
+    const byte = codePoint <= 255 ? codePoint : WINDOWS_1252_BYTES.get(character);
+    if (byte === undefined) return null;
+    bytes.push(byte);
+  }
+  return Uint8Array.from(bytes);
+}
+
+export function normalizeAdminText(value) {
+  if (typeof value !== "string" || !MOJIBAKE_MARKERS.test(value)) return value;
+
+  let normalized = value;
+  for (let pass = 0; pass < 3 && MOJIBAKE_MARKERS.test(normalized); pass += 1) {
+    const bytes = windows1252Bytes(normalized);
+    if (!bytes) break;
+    try {
+      normalized = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    } catch {
+      break;
+    }
+  }
+  return normalized;
+}
+
+function draftSignature(draft) {
+  const { originalDraftSignature: _signature, ...comparable } = draft;
+  return JSON.stringify(comparable);
+}
+
+export function hasAdminDraftChanges(draft) {
+  return (
+    !draft.originalDraftSignature ||
+    draftSignature(draft) !== draft.originalDraftSignature
+  );
+}
+
 function existingItem(item) {
+  const normalizedAlt = normalizeAdminText(item.alt ?? "");
   return {
     id: item.id,
     existing: true,
     removed: false,
     storagePath: item.src,
     name: item.src.split("/").at(-1),
+    originalTitle: item.title,
     type: item.type,
     mimeType: item.mimeType ?? null,
-    alt: item.alt ?? "",
+    alt: normalizedAlt,
+    originalAlt: item.alt ?? "",
     width: item.width,
     height: item.height,
     presentation: item.presentation,
@@ -92,6 +144,51 @@ function groupDraft(group, kind) {
   };
 }
 
+function editionSectionDraft(block) {
+  const base = {
+    id: block.id ?? draftId("edition-section"),
+    type: block.type,
+    title: normalizeAdminText(block.title ?? block.type),
+    originalTitle: block.title ?? block.type,
+    config: block.config ?? {},
+    presentation: block.presentation,
+    items: (block.items ?? []).map(existingItem),
+    groups: [],
+  };
+
+  if (block.type === "mediaRows") {
+    base.groups = (block.rows ?? []).map((items, index) => ({
+      id: `${base.id}-row-${index + 1}`,
+      existing: true,
+      removed: false,
+      kind: "media_row",
+      label: `Fila ${index + 1}`,
+      items: items.map(existingItem),
+    }));
+  } else if (block.type === "carouselPairs" || block.type === "catalogPair") {
+    base.groups = (block.items ?? []).map((group) =>
+      groupDraft(group, block.type === "catalogPair" ? "catalog" : "carousel"),
+    );
+    base.items = [];
+  }
+
+  if (block.companionVideo) {
+    base.companionVideo = existingItem(block.companionVideo);
+  }
+  return base;
+}
+
+function editionDraft(edition) {
+  return {
+    id: edition.id,
+    label: normalizeAdminText(edition.label),
+    originalLabel: edition.label,
+    config: edition.config ?? {},
+    comingSoon: edition.comingSoon,
+    sections: (edition.content ?? []).map(editionSectionDraft),
+  };
+}
+
 export function clientToAdminDraft(client) {
   const draft = createEmptyAdminDraft();
   const storyBlock = client.content?.find((block) => block.type === "storySequence");
@@ -109,11 +206,13 @@ export function clientToAdminDraft(client) {
       return;
     }
     if (block.type === "customMedia") {
+      const normalizedTitle = normalizeAdminText(block.title);
       const custom = {
         id: block.id ?? draftId("custom"),
         existing: true,
         removed: false,
-        title: block.title,
+        title: normalizedTitle,
+        originalTitle: block.title,
         config: block.config ?? {
           presentation: block.presentation ?? "mediaGrid",
         },
@@ -127,7 +226,7 @@ export function clientToAdminDraft(client) {
     if (!sectionOrder.includes(key)) sectionOrder.push(key);
   });
 
-  return {
+  const nextDraft = {
     ...draft,
     id: client.id,
     slug: client.slug,
@@ -149,19 +248,24 @@ export function clientToAdminDraft(client) {
       groupDraft(group, "catalog"),
     ),
     banners: blockItems(client, "banners").map(existingItem),
-    bannerTitle: bannerBlock?.title ?? SECTION_TITLES.banners,
+    bannerTitle: normalizeAdminText(bannerBlock?.title ?? SECTION_TITLES.banners),
+    originalBannerTitle: bannerBlock?.title ?? SECTION_TITLES.banners,
     customSections,
     sectionOrder,
     sectionConfig: {
       storySequence: storyBlock
         ? {
             presentation: storyBlock.presentation,
-            companionVideo: storyBlock.companionVideo,
+            companionVideo: storyBlock.companionVideo
+              ? existingItem(storyBlock.companionVideo)
+              : null,
           }
         : {},
     },
-    preservedEditions: client.editions ?? [],
+    editionDrafts: (client.editions ?? []).map(editionDraft),
   };
+  nextDraft.originalDraftSignature = draftSignature(nextDraft);
+  return nextDraft;
 }
 
 export function createPendingItem(file, mediaKind, metadata = {}) {
@@ -184,11 +288,12 @@ export function createPendingItem(file, mediaKind, metadata = {}) {
     width: metadata.width ?? 1080,
     height: metadata.height ?? (isVertical ? 1920 : 1350),
     presentation:
-      resolvedKind === "story"
+      metadata.presentation ??
+      (resolvedKind === "story"
         ? "phone"
         : resolvedKind === "video"
           ? "reel"
-          : "raw",
+          : "raw"),
     audioEnabled: true,
     viewport: metadata.viewport,
     config: metadata.viewport ? { viewport: metadata.viewport } : {},
@@ -225,8 +330,11 @@ function serializeItem(item, resolvedPaths) {
     id: item.existing ? item.id : undefined,
     media_kind: item.type,
     storage_path: storagePath,
-    title: item.name,
-    alt_text: item.alt || item.name,
+    title: item.existing ? item.originalTitle ?? item.name : item.name,
+    alt_text:
+      item.existing && item.alt === normalizeAdminText(item.originalAlt)
+        ? item.originalAlt || item.name
+        : item.alt || item.name,
     mime_type: item.mimeType,
     width: item.width,
     height: item.height,
@@ -265,43 +373,46 @@ function groupedSection(type, title, kind, groups, resolvedPaths) {
   return { section_type: type, title, config: {}, items: [], groups: serializedGroups };
 }
 
-function serializePublicBlock(block) {
-  const direct = (block.items ?? []).map((item) => ({
-    media_kind: item.type,
-    storage_path: item.src,
-    title: item.title,
-    alt_text: item.alt,
-    width: item.width,
-    height: item.height,
-    audio_enabled: item.type === "video" ? item.audioEnabled !== false : null,
-    config: { presentation: item.presentation },
-  }));
-  const groups =
-    block.type === "mediaRows"
-      ? (block.rows ?? []).map((row, index) => ({
-          group_kind: "media_row",
-          label: `Fila ${index + 1}`,
-          config: {},
-          items: row.map((item) => ({
-            media_kind: item.type,
-            storage_path: item.src,
-            title: item.title,
-            alt_text: item.alt,
-            width: item.width,
-            height: item.height,
-            audio_enabled: item.audioEnabled !== false,
-            config: { presentation: item.presentation },
-          })),
-        }))
-      : [];
+function originalText(current, original) {
+  return current === normalizeAdminText(original) ? original : current;
+}
+
+function serializeEditionSection(section, resolvedPaths) {
+  const groups = active(section.groups ?? [])
+    .map((group) => ({
+      group_kind:
+        group.kind ??
+        (section.type === "mediaRows"
+          ? "media_row"
+          : section.type === "catalogPair"
+            ? "catalog"
+            : "carousel"),
+      label: group.label,
+      config: group.config ?? {},
+      items: active(group.items).map((item) => serializeItem(item, resolvedPaths)),
+    }))
+    .filter((group) => group.items.length > 0);
+  const directItems = active(section.items ?? []).map((item) =>
+    serializeItem(item, resolvedPaths),
+  );
+  const companion = section.companionVideo;
+  if (companion && !companion.removed) {
+    groups.push({
+      group_kind: "story_companion",
+      label: "Video companion",
+      config: {},
+      items: [serializeItem(companion, resolvedPaths)],
+    });
+  }
 
   return {
-    section_type: block.type,
-    title: block.title,
+    section_type: section.type,
+    title: originalText(section.title, section.originalTitle),
     config: {
-      presentation: block.presentation,
+      ...(section.config ?? {}),
+      ...(section.presentation ? { presentation: section.presentation } : {}),
     },
-    items: direct,
+    items: directItems,
     groups,
   };
 }
@@ -346,7 +457,10 @@ export function buildClientPayload(draft, resolvedPaths = new Map()) {
     ),
     banners: directSection(
       "banners",
-      draft.bannerTitle?.trim() || SECTION_TITLES.banners,
+      originalText(
+        draft.bannerTitle?.trim() || SECTION_TITLES.banners,
+        draft.originalBannerTitle,
+      ),
       draft.banners,
       resolvedPaths,
       { presentation: "responsiveBanner" },
@@ -359,7 +473,7 @@ export function buildClientPayload(draft, resolvedPaths = new Map()) {
         ? null
         : directSection(
             "customMedia",
-            section.title.trim(),
+            originalText(section.title.trim(), section.originalTitle),
             section.items,
             resolvedPaths,
             section.config ?? { presentation: "mediaGrid" },
@@ -374,7 +488,11 @@ export function buildClientPayload(draft, resolvedPaths = new Map()) {
   const storySection = sections.find(
     (section) => section.section_type === "storySequence",
   );
-  if (storyConfig.companionVideo && storySection) {
+  if (
+    storyConfig.companionVideo &&
+    !storyConfig.companionVideo.removed &&
+    storySection
+  ) {
     const companion = storyConfig.companionVideo;
     storySection.groups.push({
       group_kind: "story_companion",
@@ -382,29 +500,26 @@ export function buildClientPayload(draft, resolvedPaths = new Map()) {
       config: {},
       items: [
         {
-          media_kind: companion.type,
-          storage_path: companion.src,
-          title: companion.title,
-          alt_text: companion.alt,
-          width: companion.width,
-          height: companion.height,
-          audio_enabled: false,
-          config: { presentation: companion.presentation },
+          ...serializeItem(companion, resolvedPaths),
         },
       ],
     });
   }
 
   const slug = draft.slug || slugifyClientName(draft.name);
-  const editions = draft.preservedEditions.map((edition, index) => {
-    const editionSections = (edition.content ?? []).map(serializePublicBlock);
+  const editions = (draft.editionDrafts ?? []).map((edition, index) => {
+    const editionSections = edition.sections
+      .map((section) => serializeEditionSection(section, resolvedPaths))
+      .filter(
+        (section) => section.items.length > 0 || section.groups.length > 0,
+      );
 
     return {
       edition_key: edition.id,
-      label: edition.label,
+      label: originalText(edition.label, edition.originalLabel),
       sort_order: index,
       coming_soon: !hasRenderableProjectContent({ content: editionSections }),
-      config: {},
+      config: edition.config ?? {},
       sections: editionSections,
     };
   });
@@ -440,5 +555,15 @@ export function allDraftItems(draft) {
     ...draft.catalogs.flatMap((group) => group.items),
     ...(draft.banners ?? []),
     ...(draft.customSections ?? []).flatMap((section) => section.items),
+    ...(draft.sectionConfig?.storySequence?.companionVideo
+      ? [draft.sectionConfig.storySequence.companionVideo]
+      : []),
+    ...(draft.editionDrafts ?? []).flatMap((edition) =>
+      edition.sections.flatMap((section) => [
+        ...(section.items ?? []),
+        ...(section.groups ?? []).flatMap((group) => group.items),
+        ...(section.companionVideo ? [section.companionVideo] : []),
+      ]),
+    ),
   ];
 }

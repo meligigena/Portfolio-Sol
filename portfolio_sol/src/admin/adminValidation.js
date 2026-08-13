@@ -10,6 +10,13 @@ export const IMAGE_MIME_TYPES = [
 
 export const VIDEO_MIME_TYPES = ["video/mp4"];
 
+export const VIDEO_UPLOAD_HELP = "Videos: MP4 en H.264 · Máximo 50 MB";
+
+export const VIDEO_UPLOAD_MESSAGES = {
+  invalidFormat: "El video debe estar en formato MP4.",
+  tooLarge: "El video supera el máximo permitido de 50 MB.",
+};
+
 const FILE_TOO_LARGE_MESSAGE =
   "El archivo supera el máximo permitido de 50 MB. Reducí su tamaño antes de volver a intentarlo.";
 
@@ -47,7 +54,7 @@ export function validateClientDraft(draft, { editing = false } = {}) {
       (section) => !section.removed && !section.title?.trim(),
     )
   ) {
-    errors.customSections = "Cada secciÃ³n personalizada necesita un nombre.";
+    errors.customSections = "Cada sección personalizada necesita un nombre.";
   }
 
   return errors;
@@ -55,15 +62,27 @@ export function validateClientDraft(draft, { editing = false } = {}) {
 
 export function validateFiles(files, allowedMimeTypes) {
   return [...files].flatMap((file) => {
+    const isVideoUpload =
+      file.type.startsWith("video/") && allowedMimeTypes.includes("video/mp4");
+
     if (file.size > MAX_FILE_BYTES) {
-      return [{ file, message: FILE_TOO_LARGE_MESSAGE }];
+      return [
+        {
+          file,
+          message: isVideoUpload
+            ? VIDEO_UPLOAD_MESSAGES.tooLarge
+            : FILE_TOO_LARGE_MESSAGE,
+        },
+      ];
     }
 
     if (!allowedMimeTypes.includes(file.type)) {
       return [
         {
           file,
-          message: `El formato de ${file.name} no está permitido.`,
+          message: isVideoUpload
+            ? VIDEO_UPLOAD_MESSAGES.invalidFormat
+            : `El formato de ${file.name} no está permitido.`,
         },
       ];
     }
