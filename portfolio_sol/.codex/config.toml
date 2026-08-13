@@ -1,0 +1,5 @@
+[mcp_servers.vercel]
+url = "https://mcp.vercel.com"
+
+[mcp_servers.supabase]
+url = "https://mcp.supabase.com/mcp?features=docs%2Caccount%2Cdatabase%2Cdebugging%2Cdevelopment%2Cfunctions%2Cbranching"

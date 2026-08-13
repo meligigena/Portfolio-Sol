@@ -16,6 +16,17 @@ describe("portfolio media and motion enhancements", () => {
     expect(stories).toMatch(/project-media__phone-frame[\s\S]+loading="lazy"/);
   });
 
+  it("keeps the About portrait compact when intrinsic dimensions are present", () => {
+    const styles = readFileSync("src/styles/about.css", "utf8");
+    const portraitImage = styles.match(/\.about__portrait-image\s*{[^}]+}/)?.[0] ?? "";
+
+    expect(portraitImage).toContain("width: 100%");
+    expect(portraitImage).toContain("height: auto");
+    expect(portraitImage).toContain("aspect-ratio: 5 / 4");
+    expect(portraitImage).toContain("object-fit: cover");
+    expect(portraitImage).toContain("object-position: center");
+  });
+
   it("increases only the mobile Portfolio heading line-height", () => {
     const styles = readFileSync("src/styles/portfolio.css", "utf8");
     const mobile = styles.match(

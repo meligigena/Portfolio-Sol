@@ -58,6 +58,7 @@
 .about__portrait-image {
   display: block;
   width: 100%;
+  height: auto;
   aspect-ratio: 5 / 4;
   border: clamp(0.75rem, 1.2vw, 1.25rem) solid var(--color-wine);
   object-fit: cover;
