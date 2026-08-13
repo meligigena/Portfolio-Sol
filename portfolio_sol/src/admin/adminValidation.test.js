@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   MAX_FILE_BYTES,
+  prepareFilesForUpload,
   slugifyClientName,
   validateClientDraft,
   validateFiles,
@@ -140,6 +141,86 @@ describe("admin client validation", () => {
         file,
         message:
           "El archivo necesita una exportación compatible para web. Volvé a exportarlo como MP4 H.264.",
+      },
+    ]);
+  });
+
+  it("keeps a compatible faststart MP4 without processing it", async () => {
+    const file = videoFile();
+    const fixFastStart = vi.fn();
+
+    await expect(
+      prepareFilesForUpload([file], ["video/mp4"], { fixFastStart }),
+    ).resolves.toMatchObject({ errors: [], files: [file] });
+    expect(fixFastStart).not.toHaveBeenCalled();
+  });
+
+  it("auto-fixes and revalidates an H.264 MP4 without faststart", async () => {
+    const original = videoFile({ fastStart: false });
+    const fixed = videoFile();
+    const fixFastStart = vi.fn().mockResolvedValue(fixed);
+
+    await expect(
+      prepareFilesForUpload([original], ["video/mp4"], { fixFastStart }),
+    ).resolves.toMatchObject({ errors: [], files: [fixed] });
+    expect(fixFastStart).toHaveBeenCalledOnce();
+    expect(fixFastStart).toHaveBeenCalledWith(original);
+  });
+
+  it("never auto-fixes HEVC", async () => {
+    const file = videoFile({ codec: "hev1", fastStart: false });
+    const fixFastStart = vi.fn();
+
+    const result = await prepareFilesForUpload([file], ["video/mp4"], {
+      fixFastStart,
+    });
+
+    expect(result.errors[0].message).toBe(
+      "Este video no es compatible con el portfolio. Exportalo como MP4 en H.264 e intentá nuevamente.",
+    );
+    expect(fixFastStart).not.toHaveBeenCalled();
+  });
+
+  it("rejects an oversized video before auto-fixing", async () => {
+    const file = videoFile({ fastStart: false });
+    Object.defineProperty(file, "size", { value: MAX_FILE_BYTES + 1 });
+    const fixFastStart = vi.fn();
+
+    const result = await prepareFilesForUpload([file], ["video/mp4"], {
+      fixFastStart,
+    });
+
+    expect(result.errors[0].message).toBe(
+      "El video supera el máximo permitido de 50 MB.",
+    );
+    expect(fixFastStart).not.toHaveBeenCalled();
+  });
+
+  it("rejects an invalid container before checking its oversized payload", () => {
+    const file = new File([new Uint8Array(1)], "video.mov", {
+      type: "video/quicktime",
+    });
+    Object.defineProperty(file, "size", { value: MAX_FILE_BYTES + 1 });
+
+    expect(validateFiles([file], ["video/mp4"])[0].message).toBe(
+      "El video debe estar en formato MP4.",
+    );
+  });
+
+  it("returns a simple error and no file when faststart preparation fails", async () => {
+    const file = videoFile({ fastStart: false });
+    const fixFastStart = vi.fn().mockRejectedValue(new Error("invalid stco"));
+
+    const result = await prepareFilesForUpload([file], ["video/mp4"], {
+      fixFastStart,
+    });
+
+    expect(result.files).toEqual([]);
+    expect(result.errors).toEqual([
+      {
+        file,
+        message:
+          "No pudimos preparar este video automáticamente. Volvé a exportarlo como MP4 H.264 e intentá nuevamente.",
       },
     ]);
   });

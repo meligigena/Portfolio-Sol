@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { DisplayHeading } from "../components/typography/DisplayHeading";
 import {
   createEmptyAdminDraft,
@@ -21,6 +21,7 @@ import {
   VIDEO_MIME_TYPES,
 } from "./adminValidation";
 import { FileDropzone } from "./FileDropzone";
+import { AdminUploadProcessingContext } from "./adminUploadProcessingContext";
 
 const IMAGE_ACCEPT = ".jpg,.jpeg,.png,.webp";
 const VIDEO_ACCEPT = ".mp4";
@@ -447,11 +448,17 @@ export function ClientEditor({ initialDraft, mode, onCancel, onSaved, service })
   const [errors, setErrors] = useState({});
   const [status, setStatus] = useState(null);
   const [saveError, setSaveError] = useState("");
+  const [processingUploads, setProcessingUploads] = useState(0);
   const editing = mode === "edit";
   const generatedSlug = useMemo(
     () => (editing ? draft.slug : slugifyClientName(draft.name)),
     [draft.name, draft.slug, editing],
   );
+  const reportUploadProcessing = useCallback((active) => {
+    setProcessingUploads((current) =>
+      active ? current + 1 : Math.max(0, current - 1),
+    );
+  }, []);
   const activeEdition = draft.editionDrafts.find(
     (edition) => editionDraftIdentity(edition) === activeEditionIdentity,
   );
@@ -720,6 +727,7 @@ export function ClientEditor({ initialDraft, mode, onCancel, onSaved, service })
 
   const submit = async (event) => {
     event.preventDefault();
+    if (processingUploads > 0) return;
     const nextDraft = { ...draft, slug: generatedSlug };
     const nextErrors = validateClientDraft(nextDraft, { editing });
     setErrors(nextErrors);
@@ -756,7 +764,8 @@ export function ClientEditor({ initialDraft, mode, onCancel, onSaved, service })
   }
 
   return (
-    <form className="admin-editor" onSubmit={submit}>
+    <AdminUploadProcessingContext.Provider value={reportUploadProcessing}>
+      <form className="admin-editor" onSubmit={submit}>
       <header className="admin-editor__header">
         <div>
           <p>{editing ? "Modificar cliente" : "Nuevo cliente"}</p>
@@ -767,7 +776,11 @@ export function ClientEditor({ initialDraft, mode, onCancel, onSaved, service })
         <button disabled={Boolean(status)} onClick={onCancel} type="button">
           Cancelar
         </button>
-        <button className="admin-confirm" disabled={Boolean(status)} type="submit">
+        <button
+          className="admin-confirm"
+          disabled={Boolean(status) || processingUploads > 0}
+          type="submit"
+        >
           {status ? "Guardando…" : "Confirmar cambios"}
         </button>
       </div>
@@ -934,6 +947,7 @@ export function ClientEditor({ initialDraft, mode, onCancel, onSaved, service })
         </p>
       )}
       {saveError && <p className="admin-error" role="alert">{saveError}</p>}
-    </form>
+      </form>
+    </AdminUploadProcessingContext.Provider>
   );
 }

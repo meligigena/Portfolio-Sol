@@ -110,7 +110,10 @@ async function inspectMp4File(file) {
   };
 }
 
-export async function validateVideoCompatibility(file) {
+export async function validateVideoCompatibility(
+  file,
+  { requireFastStart = true } = {},
+) {
   if (file.type !== "video/mp4" || !file.name.toLowerCase().endsWith(".mp4")) {
     return VIDEO_COMPATIBILITY_MESSAGES.mp4Required;
   }
@@ -122,6 +125,8 @@ export async function validateVideoCompatibility(file) {
   if (details.audioCodec === "incompatible") {
     return VIDEO_COMPATIBILITY_MESSAGES.aacRequired;
   }
-  if (!details.fastStart) return VIDEO_COMPATIBILITY_MESSAGES.fastStartRequired;
+  if (requireFastStart && !details.fastStart) {
+    return VIDEO_COMPATIBILITY_MESSAGES.fastStartRequired;
+  }
   return null;
 }

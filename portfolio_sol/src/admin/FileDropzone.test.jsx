@@ -5,6 +5,7 @@ import { portfolioMediaUrl } from "../lib/portfolioMedia";
 import { createEmptyAdminDraft } from "./adminDraft";
 import { ClientEditor } from "./ClientEditor";
 import { FileDropzone } from "./FileDropzone";
+import { fastStartMp4 } from "./videoFastStart";
 
 const IMAGE_TYPES = ["image/jpeg", "image/png"];
 
@@ -14,6 +15,7 @@ function DropzoneHarness({
   mediaKind = "post",
   multiple = true,
   onItemsChange = () => {},
+  prepareOptions,
   showAudio = false,
 }) {
   const [items, setItems] = useState(initialItems);
@@ -32,6 +34,7 @@ function DropzoneHarness({
         mediaKind={mediaKind}
         multiple={multiple}
         onChange={updateItems}
+        prepareOptions={prepareOptions}
         showAudio={showAudio}
       />
       <output aria-label="Cantidad activa">
@@ -41,7 +44,7 @@ function DropzoneHarness({
   );
 }
 
-function mp4Video(codec) {
+function mp4Video(codec, { fastStart = true } = {}) {
   const encodeBox = (type, payload = new Uint8Array()) => {
     const box = new Uint8Array(8 + payload.length);
     new DataView(box.buffer).setUint32(0, box.length);
@@ -52,7 +55,10 @@ function mp4Video(codec) {
   const ftyp = encodeBox("ftyp", new TextEncoder().encode("isom0000isomavc1"));
   const moov = encodeBox("moov", encodeBox(codec, new Uint8Array(32)));
   const mdat = encodeBox("mdat", new Uint8Array(8));
-  return new File([new Uint8Array([...ftyp, ...moov, ...mdat])], "nuevo.mp4", {
+  const bytes = fastStart
+    ? new Uint8Array([...ftyp, ...moov, ...mdat])
+    : new Uint8Array([...ftyp, ...mdat, ...moov]);
+  return new File([bytes], "nuevo.mp4", {
     type: "video/mp4",
   });
 }
@@ -442,5 +448,59 @@ describe("FileDropzone previews", () => {
       "Este video no es compatible con el portfolio. Exportalo como MP4 en H.264 e intentá nuevamente.",
     );
     await waitFor(() => expect(onChange).not.toHaveBeenCalled());
+  });
+
+  it("prepares a compatible H.264 video without faststart and previews the fixed File", async () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <DropzoneHarness
+        mediaKind="video"
+        onItemsChange={onChange}
+        prepareOptions={{ fixFastStart: fastStartMp4 }}
+      />,
+    );
+
+    fireEvent.change(container.querySelector('input[type="file"]'), {
+      target: { files: [mp4Video("avc1", { fastStart: false })] },
+    });
+
+    expect(await screen.findByLabelText("Preview de nuevo.mp4")).toBeInTheDocument();
+    const fixedFile = onChange.mock.calls[0][0][0].file;
+    expect(fixedFile.type).toBe("video/mp4");
+    expect(fixedFile.name).toBe("nuevo.mp4");
+    expect(fixedFile).not.toBeNull();
+  });
+
+  it("shows the preparation state and prevents duplicate processing", async () => {
+    let finishPreparation;
+    const fixFastStart = vi.fn(
+      () => new Promise((resolve) => { finishPreparation = resolve; }),
+    );
+    const onProcessingChange = vi.fn();
+    const { container } = render(
+      <FileDropzone
+        accept=".mp4"
+        allowedMimeTypes={["video/mp4"]}
+        items={[]}
+        mediaKind="video"
+        onChange={vi.fn()}
+        onProcessingChange={onProcessingChange}
+        prepareOptions={{ fixFastStart }}
+      />,
+    );
+    const input = container.querySelector('input[type="file"]');
+    const source = mp4Video("avc1", { fastStart: false });
+
+    fireEvent.change(input, { target: { files: [source] } });
+
+    expect(
+      await screen.findByRole("button", { name: "Preparando video para web…" }),
+    ).toBeDisabled();
+    fireEvent.change(input, { target: { files: [source] } });
+    expect(fixFastStart).toHaveBeenCalledOnce();
+    expect(onProcessingChange).toHaveBeenCalledWith(true);
+
+    finishPreparation(mp4Video("avc1"));
+    await waitFor(() => expect(onProcessingChange).toHaveBeenLastCalledWith(false));
   });
 });

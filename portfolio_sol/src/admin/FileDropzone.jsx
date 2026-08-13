@@ -1,12 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { portfolioMediaUrl } from "../lib/portfolioMedia";
 import { createPendingItem, moveAdminMediaItem } from "./adminDraft";
+import { AdminUploadProcessingContext } from "./adminUploadProcessingContext";
 import {
+  prepareFilesForUpload,
   VIDEO_UPLOAD_HELP,
   validateFiles,
-  validateFilesForUpload,
 } from "./adminValidation";
-import { inspectMp4Video } from "./videoCompatibility";
 
 function PendingPreview({ file, kind }) {
   const previewRef = useRef(null);
@@ -62,12 +62,17 @@ export function FileDropzone({
   mediaKind,
   multiple = true,
   onChange,
+  onProcessingChange,
   pendingItemMetadata,
+  prepareOptions,
   showAudio = false,
 }) {
   const inputRef = useRef(null);
+  const processingContext = useContext(AdminUploadProcessingContext);
+  const reportProcessing = onProcessingChange ?? processingContext;
+  const validatingRef = useRef(false);
   const [error, setError] = useState("");
-  const [validating, setValidating] = useState(false);
+  const [processingPhase, setProcessingPhase] = useState(null);
   const effectiveMaxItems = maxItems ?? (multiple ? Infinity : 1);
   const acceptsMultiple = multiple && effectiveMaxItems !== 1;
   const hasCurrentItem = items.some((item) => !item.removed);
@@ -96,6 +101,7 @@ export function FileDropzone({
   };
 
   const addFiles = (fileList) => {
+    if (validatingRef.current) return;
     const files = [...fileList];
     if (files.length === 0) return;
     const activeItemCount = items.filter((item) => !item.removed).length;
@@ -120,23 +126,30 @@ export function FileDropzone({
       return;
     }
 
-    setValidating(true);
-    void validateFilesForUpload(files, allowedMimeTypes)
-      .then((videoErrors) => {
-        if (videoErrors.length > 0) {
-          setError(videoErrors[0].message);
+    validatingRef.current = true;
+    setProcessingPhase("validating");
+    reportProcessing(true);
+    void prepareFilesForUpload(files, allowedMimeTypes, {
+      ...prepareOptions,
+      onFastStartRequired: () => setProcessingPhase("preparing"),
+    })
+      .then((result) => {
+        if (result.errors.length > 0) {
+          setError(result.errors[0].message);
           return;
         }
-        return Promise.all(files.map((file) => inspectMp4Video(file))).then(
-          (details) => addPendingFiles(files, details),
-        );
+        addPendingFiles(result.files, result.details);
       })
       .catch(() => {
         setError(
           "No se pudo inspeccionar el codec de este video. Exportalo como MP4 H.264 antes de subirlo.",
         );
       })
-      .finally(() => setValidating(false));
+      .finally(() => {
+        validatingRef.current = false;
+        setProcessingPhase(null);
+        reportProcessing(false);
+      });
   };
 
   const removeItem = (index) => {
@@ -164,11 +177,13 @@ export function FileDropzone({
         onDragOver={(event) => event.preventDefault()}
         onDrop={(event) => {
           event.preventDefault();
+          if (validatingRef.current) return;
           addFiles(event.dataTransfer.files);
         }}
       >
         <input
           accept={accept}
+          disabled={Boolean(processingPhase)}
           hidden
           multiple={acceptsMultiple}
           onChange={(event) => {
@@ -183,12 +198,14 @@ export function FileDropzone({
           <p>{VIDEO_UPLOAD_HELP}</p>
         )}
         <button
-          disabled={validating}
+          disabled={Boolean(processingPhase)}
           onClick={() => inputRef.current?.click()}
           type="button"
         >
-          {validating
-            ? "Verificando video…"
+          {processingPhase
+            ? processingPhase === "preparing"
+              ? "Preparando video para web…"
+              : "Verificando video…"
             : usesEditableSingleActions && hasCurrentItem
               ? "Reemplazar"
               : acceptsMultiple
