@@ -2,9 +2,18 @@ import { useMemo, useState } from "react";
 import { DisplayHeading } from "../components/typography/DisplayHeading";
 import {
   createEmptyAdminDraft,
+  createPendingEdition,
+  createPendingEditionSection,
   createPendingGroup,
   createPendingCustomSection,
+  editionDraftIdentity,
 } from "./adminDraft";
+import {
+  CUSTOM_SECTION_DEFINITION,
+  getAvailableSectionDefinitions,
+  getSectionDefinitionByKey,
+  getSectionDefinitionByType,
+} from "./adminSectionRegistry";
 import {
   IMAGE_MIME_TYPES,
   slugifyClientName,
@@ -15,7 +24,6 @@ import { FileDropzone } from "./FileDropzone";
 
 const IMAGE_ACCEPT = ".jpg,.jpeg,.png,.webp";
 const VIDEO_ACCEPT = ".mp4";
-const CUSTOM_ACCEPT = `${IMAGE_ACCEPT},${VIDEO_ACCEPT}`;
 
 function Section({ actions = null, children, title }) {
   return (
@@ -55,47 +63,137 @@ function SectionOrderActions({ index, onMove, onRemove, total }) {
   );
 }
 
-function GroupedUploads({ draft, groupKey, kind, onDraftChange }) {
-  const groups = draft[groupKey];
+function sectionItems(section) {
+  return [
+    ...(section.items ?? []),
+    ...(section.groups ?? []).flatMap((group) => group.items ?? []),
+    ...(section.companionVideo ? [section.companionVideo] : []),
+  ];
+}
+
+function AddSectionControl({ context, onAdd, presentTypes }) {
+  const [requestedType, setRequestedType] = useState("");
+  const available = getAvailableSectionDefinitions({ context, presentTypes });
+  const selectedType = available.some(
+    (definition) => definition.type === requestedType,
+  )
+    ? requestedType
+    : available[0]?.type ?? "";
+
+  return (
+    <div className="admin-add-section-control">
+      <label>
+        Tipo de sección
+        <select
+          onChange={(event) => setRequestedType(event.target.value)}
+          value={selectedType}
+        >
+          {available.map((definition) => (
+            <option key={definition.type} value={definition.type}>
+              {definition.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <button
+        className="admin-secondary-action"
+        disabled={!selectedType}
+        onClick={() => onAdd(selectedType)}
+        type="button"
+      >
+        + Añadir sección
+      </button>
+    </div>
+  );
+}
+
+function hasEditionContent(edition) {
+  return edition.sections.some((section) =>
+    sectionItems(section).some((item) => !item.removed),
+  );
+}
+
+function hasRootDraftContent(draft) {
+  return (
+    [draft.stories, draft.posts, draft.videos, draft.banners].some((items) =>
+      (items ?? []).some((item) => !item.removed),
+    ) ||
+    [draft.carousels, draft.catalogs].some((groups) =>
+      (groups ?? []).some((group) =>
+        !group.removed && group.items.some((item) => !item.removed),
+      ),
+    ) ||
+    (draft.customSections ?? []).some(
+      (section) => !section.removed && (section.title || section.items.length > 0),
+    )
+  );
+}
+
+function markSectionRemoved(section, removed) {
+  return {
+    ...section,
+    removed,
+    items: (section.items ?? []).map((item) => ({ ...item, removed })),
+    groups: (section.groups ?? []).map((group) => ({
+      ...group,
+      removed,
+      items: (group.items ?? []).map((item) => ({ ...item, removed })),
+    })),
+    companionVideo: section.companionVideo
+      ? { ...section.companionVideo, removed }
+      : undefined,
+  };
+}
+
+function DraftGroupedUploads({ kind, section, onChange }) {
+  const isRows = kind === "media_row";
   const isCarousel = kind === "carousel";
-  const itemKind = isCarousel ? "carouselSlide" : "catalogPage";
+  const itemKind = isRows ? "video" : isCarousel ? "carouselSlide" : "catalogPage";
+  const accept = isRows ? VIDEO_ACCEPT : IMAGE_ACCEPT;
+  const allowedMimeTypes = isRows ? VIDEO_MIME_TYPES : IMAGE_MIME_TYPES;
+  const noun = isRows ? "fila" : isCarousel ? "carrusel" : "catálogo";
 
   return (
     <>
-      {groups.map((group, groupIndex) => (
-        <div
-          className={`admin-media-group${group.removed ? " is-removed" : ""}`}
-          key={group.id}
-        >
+      {section.groups.map((group, groupIndex) => (
+        <div className={`admin-media-group${group.removed ? " is-removed" : ""}`} key={group.id}>
           <div className="admin-media-group__header">
-            <label>
-              Nombre
-              <input
-                disabled={group.removed}
-                onChange={(event) =>
-                  onDraftChange({
-                    ...draft,
-                    [groupKey]: groups.map((entry, index) =>
-                      index === groupIndex
-                        ? { ...entry, label: event.target.value }
-                        : entry,
-                    ),
-                  })
-                }
-                value={group.label}
-              />
-            </label>
+            <div>
+              <h4>{group.label}</h4>
+              <label>
+                Nombre
+                <input
+                  disabled={group.removed}
+                  onChange={(event) =>
+                    onChange({
+                      ...section,
+                      groups: section.groups.map((entry, index) =>
+                        index === groupIndex ? { ...entry, label: event.target.value } : entry,
+                      ),
+                    })
+                  }
+                  value={group.label}
+                />
+              </label>
+            </div>
             <button
               onClick={() =>
-                onDraftChange({
-                  ...draft,
-                  [groupKey]: group.existing
-                    ? groups.map((entry, index) =>
+                onChange({
+                  ...section,
+                  groups: group.existing
+                    ? section.groups.map((entry, index) =>
                         index === groupIndex
-                          ? { ...entry, removed: !entry.removed }
+                          ? {
+                              ...entry,
+                              removed: !entry.removed,
+                              items: entry.items.map((item) => ({
+                                ...item,
+                                removed: !entry.removed,
+                              })),
+                            }
                           : entry,
                       )
-                    : groups.filter((_entry, index) => index !== groupIndex),
+                    : section.groups.filter((_entry, index) => index !== groupIndex),
                 })
               }
               type="button"
@@ -105,201 +203,235 @@ function GroupedUploads({ draft, groupKey, kind, onDraftChange }) {
           </div>
           {!group.removed && (
             <FileDropzone
-              accept={IMAGE_ACCEPT}
-              allowedMimeTypes={IMAGE_MIME_TYPES}
+              accept={accept}
+              allowedMimeTypes={allowedMimeTypes}
               items={group.items}
               mediaKind={itemKind}
               onChange={(items) =>
-                onDraftChange({
-                  ...draft,
-                  [groupKey]: groups.map((entry, index) =>
+                onChange({
+                  ...section,
+                  groups: section.groups.map((entry, index) =>
                     index === groupIndex ? { ...entry, items } : entry,
                   ),
                 })
               }
+              showAudio={isRows}
             />
           )}
-          <p>
-            {group.label} — {group.items.filter((item) => !item.removed).length}{" "}
-            {isCarousel ? "imágenes" : "páginas"}
-          </p>
         </div>
       ))}
       <button
         className="admin-secondary-action"
-        onClick={() =>
-          onDraftChange({
-            ...draft,
-            [groupKey]: [...groups, createPendingGroup(kind, groups.length)],
-          })
-        }
+        onClick={() => {
+          const group = createPendingGroup(
+            isCarousel ? "carousel" : isRows ? "row" : "catalog",
+            section.groups.length,
+          );
+          onChange({
+            ...section,
+            groups: [
+              ...section.groups,
+              {
+                ...group,
+                kind,
+                label: `${isRows ? "Fila" : isCarousel ? "Carrusel" : "Catálogo"} ${section.groups.length + 1}`,
+              },
+            ],
+          });
+        }}
         type="button"
       >
-        + Añadir {isCarousel ? "otro carrusel" : "otro catálogo"}
+        + Añadir {noun}
       </button>
     </>
   );
 }
 
-function BannerUploads({ draft, onDraftChange }) {
+function DraftBannerUploads({ section, onChange }) {
   const variants = [
-    { key: "desktop", label: "Desktop / tablet grande" },
-    { key: "mobile", label: "Mobile" },
+    ["desktop", "Desktop / tablet grande"],
+    ["mobile", "Mobile"],
   ];
-  const replaceVariant = (viewport, items) => {
-    const nextByViewport = new Map(
-      draft.banners
-        .filter((item) => item.viewport !== viewport)
-        .map((item) => [item.viewport, item]),
-    );
-    if (items[0]) nextByViewport.set(viewport, items[0]);
-    onDraftChange({
-      ...draft,
-      banners: variants
-        .map(({ key }) => nextByViewport.get(key))
-        .filter(Boolean),
-    });
-  };
 
   return (
-    <>
-      <label>
-        Título público
-        <input
-          onChange={(event) =>
-            onDraftChange({ ...draft, bannerTitle: event.target.value })
-          }
-          value={draft.bannerTitle}
-        />
-      </label>
-      <div className="admin-banner-variants">
-        {variants.map((variant) => (
-          <div className="admin-banner-variant" key={variant.key}>
-            <h3>{variant.label}</h3>
-            <FileDropzone
-              accept={IMAGE_ACCEPT}
-              allowedMimeTypes={IMAGE_MIME_TYPES}
-              items={draft.banners.filter(
-                (item) => item.viewport === variant.key,
-              )}
-              mediaKind="banner"
-              multiple={false}
-              onChange={(items) => replaceVariant(variant.key, items)}
-              pendingItemMetadata={{ viewport: variant.key }}
-            />
-          </div>
-        ))}
-      </div>
-    </>
-  );
-}
-
-function StoryCompanionUpload({ draft, onDraftChange }) {
-  const storyConfig = draft.sectionConfig.storySequence ?? {};
-  const companion = storyConfig.companionVideo;
-  if (!companion && storyConfig.presentation !== "dualPhoneVideo") return null;
-
-  return (
-    <div className="admin-media-group">
-      <div className="admin-media-group__header">
-        <h3>Video companion de Stories</h3>
-      </div>
-      <FileDropzone
-        accept={VIDEO_ACCEPT}
-        allowedMimeTypes={VIDEO_MIME_TYPES}
-        items={companion ? [companion] : []}
-        mediaKind="video"
-        multiple={false}
-        onChange={(items) =>
-          onDraftChange({
-            ...draft,
-            sectionConfig: {
-              ...draft.sectionConfig,
-              storySequence: {
-                ...storyConfig,
-                companionVideo: items[0] ?? null,
-              },
-            },
-          })
-        }
-        pendingItemMetadata={{ presentation: "phone" }}
-        showAudio
-      />
+    <div className="admin-banner-variants">
+      {variants.map(([viewport, label]) => (
+        <div className="admin-banner-variant" key={viewport}>
+          <h3>{label}</h3>
+          <FileDropzone
+            accept={IMAGE_ACCEPT}
+            allowedMimeTypes={IMAGE_MIME_TYPES}
+            items={section.items.filter((item) => item.viewport === viewport)}
+            mediaKind="banner"
+            multiple={false}
+            onChange={(items) =>
+              onChange({
+                ...section,
+                items: [
+                  ...section.items.filter((item) => item.viewport !== viewport),
+                  ...items,
+                ],
+              })
+            }
+            pendingItemMetadata={{ viewport }}
+          />
+        </div>
+      ))}
     </div>
   );
 }
 
-function EditionEditor({ draft, editionIndex, onDraftChange }) {
-  const edition = draft.editionDrafts[editionIndex];
-  const updateSection = (sectionIndex, nextSection) => {
-    onDraftChange({
-      ...draft,
-      editionDrafts: draft.editionDrafts.map((entry, index) =>
-        index === editionIndex
-          ? {
-              ...entry,
-              sections: entry.sections.map((section, currentIndex) =>
-                currentIndex === sectionIndex ? nextSection : section,
-              ),
-            }
-          : entry,
-      ),
-    });
-  };
+function DraftSectionEditor({ index, onChange, onMove, onRemove, section, total }) {
+  const definition = getSectionDefinitionByType(section.type);
 
   return (
-    <section className="admin-edition" data-admin-edition={edition.id}>
-      <h2>{edition.label}</h2>
-      {edition.sections.map((section, sectionIndex) => (
-        <div className="admin-editor__section" key={section.id}>
-          <div className="admin-editor__section-header">
-            <DisplayHeading as="h3" text={section.title} />
-          </div>
-          {section.type === "mediaRows" ? (
-            section.groups.map((group, groupIndex) => (
-              <div className="admin-media-group" key={group.id}>
-                <div className="admin-media-group__header">
-                  <h4>{group.label}</h4>
-                </div>
-                <FileDropzone
-                  accept={VIDEO_ACCEPT}
-                  allowedMimeTypes={VIDEO_MIME_TYPES}
-                  items={group.items}
-                  mediaKind="video"
-                  onChange={(items) =>
-                    updateSection(sectionIndex, {
-                      ...section,
-                      groups: section.groups.map((entry, index) =>
-                        index === groupIndex ? { ...entry, items } : entry,
-                      ),
-                    })
-                  }
-                  showAudio
-                />
-              </div>
-            ))
-          ) : (
+    <Section
+      actions={
+        <SectionOrderActions
+          index={index}
+          onMove={onMove}
+          onRemove={onRemove}
+          total={total}
+        />
+      }
+      title={(section.editorTitle ?? section.title) || "Sección personalizada"}
+    >
+      {section.type === "customMedia" && (
+        <label>
+          Nombre de la sección
+          <input
+            onChange={(event) => onChange({ ...section, title: event.target.value })}
+            value={section.title}
+          />
+        </label>
+      )}
+      {section.type === "banners" && (
+        <label>
+          Título público
+          <input
+            onChange={(event) => onChange({ ...section, title: event.target.value })}
+            value={section.title}
+          />
+        </label>
+      )}
+      {definition?.uploader === "direct" && (
+        <FileDropzone
+          accept={definition.accept}
+          allowedMimeTypes={definition.allowedMimeTypes}
+          items={section.items}
+          mediaKind={definition.mediaKind}
+          onChange={(items) => onChange({ ...section, items })}
+          showAudio={definition.showAudio}
+        />
+      )}
+      {section.type === "storySequence" &&
+        (section.companionVideo || section.presentation === "dualPhoneVideo") && (
+          <div className="admin-media-group">
+            <div className="admin-media-group__header">
+              <h3>Video companion de Stories</h3>
+            </div>
             <FileDropzone
-              accept={section.type === "storySequence" ? IMAGE_ACCEPT : CUSTOM_ACCEPT}
-              allowedMimeTypes={
-                section.type === "storySequence"
-                  ? IMAGE_MIME_TYPES
-                  : [...IMAGE_MIME_TYPES, ...VIDEO_MIME_TYPES]
+              accept={VIDEO_ACCEPT}
+              allowedMimeTypes={VIDEO_MIME_TYPES}
+              items={section.companionVideo ? [section.companionVideo] : []}
+              mediaKind="video"
+              multiple={false}
+              onChange={(items) =>
+                onChange({ ...section, companionVideo: items[0] ?? null })
               }
-              items={section.items}
-              mediaKind={section.type === "storySequence" ? "story" : "custom"}
-              onChange={(items) => updateSection(sectionIndex, { ...section, items })}
+              pendingItemMetadata={{ presentation: "phone" }}
               showAudio
             />
-          )}
-        </div>
+          </div>
+        )}
+      {section.type === "banners" && (
+        <DraftBannerUploads onChange={onChange} section={section} />
+      )}
+      {definition?.uploader === "grouped" && (
+        <DraftGroupedUploads
+          kind={definition.groupKind}
+          onChange={onChange}
+          section={section}
+        />
+      )}
+    </Section>
+  );
+}
+
+function EditionEditor({ edition, onEditionChange }) {
+  const activeSections = edition.sections.filter((section) => !section.removed);
+  const updateSection = (sectionId, nextSection) =>
+    onEditionChange({
+      ...edition,
+      sections: edition.sections.map((section) =>
+        section.id === sectionId ? nextSection : section,
+      ),
+    });
+
+  return (
+    <section className="admin-edition" data-admin-edition={editionDraftIdentity(edition)}>
+      <header className="admin-edition__header">
+        <DisplayHeading as="h2" text={edition.label} />
+      </header>
+      {activeSections.map((section, index) => (
+        <DraftSectionEditor
+          index={index}
+          key={section.id}
+          onChange={(nextSection) => updateSection(section.id, nextSection)}
+          onMove={(offset) => {
+            const target = index + offset;
+            if (target < 0 || target >= activeSections.length) return;
+            const nextActive = [...activeSections];
+            [nextActive[index], nextActive[target]] = [nextActive[target], nextActive[index]];
+            onEditionChange({
+              ...edition,
+              sections: [
+                ...nextActive,
+                ...edition.sections.filter((sectionEntry) => sectionEntry.removed),
+              ],
+            });
+          }}
+          onRemove={() => updateSection(section.id, markSectionRemoved(section, true))}
+          section={section}
+          total={activeSections.length}
+        />
       ))}
+      {edition.sections
+        .filter((section) => section.removed)
+        .map((section) => (
+          <div className="admin-notice" key={section.id}>
+            <span>{section.title || "Sección personalizada"} se eliminará al confirmar.</span>
+            <button
+              onClick={() => updateSection(section.id, markSectionRemoved(section, false))}
+              type="button"
+            >
+              Conservar sección
+            </button>
+          </div>
+        ))}
+      {activeSections.length === 0 && (
+        <p className="admin-edition__empty">Esta edición todavía no tiene secciones.</p>
+      )}
+      <AddSectionControl
+        context="edition"
+        onAdd={(type) =>
+          onEditionChange({
+            ...edition,
+            sections: [...edition.sections, createPendingEditionSection(type)],
+          })
+        }
+        presentTypes={edition.sections.map((section) => section.type)}
+      />
     </section>
   );
 }
 
 export function ClientEditor({ initialDraft, mode, onCancel, onSaved, service }) {
   const [draft, setDraft] = useState(initialDraft ?? createEmptyAdminDraft());
+  const [activeEditionIdentity, setActiveEditionIdentity] = useState(() => {
+    const firstEdition = initialDraft?.editionDrafts?.[0];
+    return firstEdition ? editionDraftIdentity(firstEdition) : null;
+  });
   const [errors, setErrors] = useState({});
   const [status, setStatus] = useState(null);
   const [saveError, setSaveError] = useState("");
@@ -308,6 +440,24 @@ export function ClientEditor({ initialDraft, mode, onCancel, onSaved, service })
     () => (editing ? draft.slug : slugifyClientName(draft.name)),
     [draft.name, draft.slug, editing],
   );
+  const activeEdition = draft.editionDrafts.find(
+    (edition) => editionDraftIdentity(edition) === activeEditionIdentity,
+  );
+  const logoItems = useMemo(() => {
+    if (draft.logo) return [draft.logo];
+    if (!draft.existingLogoPath) return [];
+    return [
+      {
+        id: "current-client-logo",
+        existing: true,
+        removed: draft.logoRemoved,
+        storagePath: draft.existingLogoPath,
+        name: draft.existingLogoPath.split("/").at(-1),
+        type: "logo",
+        alt: `Logo actual de ${draft.name || "cliente"}`,
+      },
+    ];
+  }, [draft.existingLogoPath, draft.logo, draft.logoRemoved, draft.name]);
 
   const updateField = (field, value) => {
     setDraft((current) => ({ ...current, [field]: value }));
@@ -350,132 +500,210 @@ export function ClientEditor({ initialDraft, mode, onCancel, onSaved, service })
     });
   };
 
-  const sectionActions = (index, onRemove = null) => (
-    <SectionOrderActions
-      index={index}
-      onMove={(offset) => moveSection(index, offset)}
-      onRemove={onRemove}
-      total={draft.sectionOrder.length}
-    />
-  );
-
   const renderContentSection = (sectionKey, index) => {
-    const directSections = {
-      stories: {
-        accept: IMAGE_ACCEPT,
-        allowedMimeTypes: IMAGE_MIME_TYPES,
-        items: draft.stories,
-        mediaKind: "story",
-        title: "Stories",
-      },
-      posts: {
-        accept: IMAGE_ACCEPT,
-        allowedMimeTypes: IMAGE_MIME_TYPES,
-        items: draft.posts,
-        mediaKind: "post",
-        title: "Posts",
-      },
-      videos: {
-        accept: VIDEO_ACCEPT,
-        allowedMimeTypes: VIDEO_MIME_TYPES,
-        items: draft.videos,
-        mediaKind: "video",
-        showAudio: true,
-        title: "Videos",
-      },
-    };
-    const direct = directSections[sectionKey];
-    if (direct) {
-      return (
-        <Section actions={sectionActions(index)} key={sectionKey} title={direct.title}>
-          <FileDropzone
-            accept={direct.accept}
-            allowedMimeTypes={direct.allowedMimeTypes}
-            items={direct.items}
-            mediaKind={direct.mediaKind}
-            onChange={(items) => setDraft({ ...draft, [sectionKey]: items })}
-            showAudio={direct.showAudio}
-          />
-          {sectionKey === "stories" && (
-            <StoryCompanionUpload draft={draft} onDraftChange={setDraft} />
-          )}
-        </Section>
-      );
-    }
-    if (sectionKey === "carousels" || sectionKey === "catalogs") {
-      const isCarousel = sectionKey === "carousels";
-      return (
-        <Section
-          actions={sectionActions(index)}
-          key={sectionKey}
-          title={isCarousel ? "Carruseles" : "Catálogos"}
-        >
-          <GroupedUploads
-            draft={draft}
-            groupKey={sectionKey}
-            kind={isCarousel ? "carousel" : "catalog"}
-            onDraftChange={setDraft}
-          />
-        </Section>
-      );
-    }
-    if (sectionKey === "banners") {
-      return (
-        <Section actions={sectionActions(index)} key={sectionKey} title="Banners">
-          <BannerUploads draft={draft} onDraftChange={setDraft} />
-        </Section>
-      );
-    }
-
+    const definition = getSectionDefinitionByKey(sectionKey);
+    const storedEntries = definition?.draftField
+      ? draft[definition.draftField] ?? []
+      : [];
+    const standardSection = definition
+      ? {
+          id: definition.key,
+          type: definition.type,
+          editorTitle: definition.label,
+          title:
+            definition.type === "banners" ? draft.bannerTitle : definition.label,
+          items: definition.uploader === "grouped" ? [] : storedEntries,
+          groups: definition.uploader === "grouped" ? storedEntries : [],
+          config:
+            definition.type === "storySequence"
+              ? draft.sectionConfig.storySequence ?? definition.initialConfig
+              : definition.initialConfig,
+          presentation:
+            definition.type === "storySequence"
+              ? draft.sectionConfig.storySequence?.presentation
+              : definition.initialConfig.presentation,
+          companionVideo:
+            definition.type === "storySequence"
+              ? draft.sectionConfig.storySequence?.companionVideo
+              : undefined,
+        }
+      : null;
     const customId = sectionKey.startsWith("custom:")
       ? sectionKey.slice("custom:".length)
       : null;
     const custom = draft.customSections.find((section) => section.id === customId);
-    if (!custom) return null;
+    const section = standardSection ?? (custom
+      ? { ...custom, type: "customMedia", groups: [], config: custom.config ?? {} }
+      : null);
+    if (!section) return null;
 
-    return (
-      <Section
-        actions={sectionActions(index, () => removeCustomSection(custom))}
-        key={sectionKey}
-        title={custom.title || "Sección personalizada"}
-      >
-        <label>
-          Nombre de la sección
-          <input
-            disabled={custom.removed}
-            onChange={(event) => {
+    if (custom?.removed) {
+      return (
+        <div className="admin-notice" key={sectionKey}>
+          <span>{custom.title || "Sección personalizada"} se eliminará al confirmar.</span>
+          <button
+            onClick={() =>
               setDraft({
                 ...draft,
-                customSections: draft.customSections.map((section) =>
-                  section.id === custom.id
-                    ? { ...section, title: event.target.value }
-                    : section,
-                ),
-              });
-              setErrors((current) => ({ ...current, customSections: undefined }));
-            }}
-            value={custom.title}
-          />
-        </label>
-        {!custom.removed && (
-          <FileDropzone
-            accept={CUSTOM_ACCEPT}
-            allowedMimeTypes={[...IMAGE_MIME_TYPES, ...VIDEO_MIME_TYPES]}
-            items={custom.items}
-            mediaKind="custom"
-            onChange={(items) =>
-              setDraft({
-                ...draft,
-                customSections: draft.customSections.map((section) =>
-                  section.id === custom.id ? { ...section, items } : section,
+                customSections: draft.customSections.map((entry) =>
+                  entry.id === custom.id
+                    ? {
+                        ...entry,
+                        removed: false,
+                        items: entry.items.map((item) => ({
+                          ...item,
+                          removed: false,
+                        })),
+                      }
+                    : entry,
                 ),
               })
             }
-            showAudio
-          />
-        )}
-      </Section>
+            type="button"
+          >
+            Conservar sección
+          </button>
+        </div>
+      );
+    }
+
+    const updateRootSection = (nextSection) => {
+      if (definition) {
+        const nextDraft = {
+          ...draft,
+          [definition.draftField]:
+            definition.uploader === "grouped"
+              ? nextSection.groups
+              : nextSection.items,
+        };
+        if (definition.type === "storySequence") {
+          nextDraft.sectionConfig = {
+            ...draft.sectionConfig,
+            storySequence: {
+              ...(nextSection.config ?? {}),
+              presentation: nextSection.presentation,
+              companionVideo: nextSection.companionVideo ?? null,
+            },
+          };
+        }
+        if (definition.type === "banners") {
+          nextDraft.bannerTitle = nextSection.title;
+        }
+        setDraft(nextDraft);
+      } else if (custom) {
+        setDraft({
+          ...draft,
+          customSections: draft.customSections.map((entry) =>
+            entry.id === custom.id ? { ...entry, ...nextSection } : entry,
+          ),
+        });
+        setErrors((current) => ({ ...current, customSections: undefined }));
+      }
+    };
+
+    return (
+      <DraftSectionEditor
+        index={index}
+        key={sectionKey}
+        onChange={updateRootSection}
+        onMove={(offset) => moveSection(index, offset)}
+        onRemove={custom ? () => removeCustomSection(custom) : null}
+        section={section}
+        total={draft.sectionOrder.length}
+      />
     );
+  };
+
+  const addRootSection = (type) => {
+    if (type === CUSTOM_SECTION_DEFINITION.type) {
+      const section = createPendingCustomSection();
+      setDraft({
+        ...draft,
+        customSections: [...draft.customSections, section],
+        sectionOrder: [...draft.sectionOrder, `custom:${section.id}`],
+      });
+      return;
+    }
+
+    const definition = getSectionDefinitionByType(type);
+    if (!definition?.key || draft.sectionOrder.includes(definition.key)) return;
+    setDraft({
+      ...draft,
+      sectionOrder: [...draft.sectionOrder, definition.key],
+    });
+  };
+
+  const enableEditions = () => {
+    if (
+      hasRootDraftContent(draft) &&
+      !globalThis.confirm?.(
+        "El editor normal contiene cambios. ¿Querés descartarlos y empezar con Edición 1?",
+      )
+    ) {
+      return;
+    }
+    const firstEdition = createPendingEdition([]);
+    const emptyDraft = createEmptyAdminDraft();
+    setDraft((current) => ({
+      ...current,
+      stories: emptyDraft.stories,
+      posts: emptyDraft.posts,
+      carousels: emptyDraft.carousels,
+      videos: emptyDraft.videos,
+      catalogs: emptyDraft.catalogs,
+      banners: emptyDraft.banners,
+      customSections: emptyDraft.customSections,
+      sectionOrder: emptyDraft.sectionOrder,
+      sectionConfig: emptyDraft.sectionConfig,
+      usesEditions: true,
+      editionDrafts: [firstEdition],
+    }));
+    setActiveEditionIdentity(editionDraftIdentity(firstEdition));
+  };
+
+  const disableEditions = () => {
+    const hasContent = draft.editionDrafts.some(hasEditionContent);
+    if (
+      hasContent &&
+      !globalThis.confirm?.(
+        "Las ediciones contienen archivos o contenido. ¿Querés descartarlos y volver al editor normal?",
+      )
+    ) {
+      return;
+    }
+    setDraft({ ...draft, usesEditions: false, editionDrafts: [] });
+    setActiveEditionIdentity(null);
+  };
+
+  const addEdition = () => {
+    const nextEdition = createPendingEdition(draft.editionDrafts);
+    setDraft({
+      ...draft,
+      editionDrafts: [...draft.editionDrafts, nextEdition],
+    });
+    setActiveEditionIdentity(editionDraftIdentity(nextEdition));
+  };
+
+  const discardActiveEdition = () => {
+    if (!activeEdition || activeEdition.persistedId || hasEditionContent(activeEdition)) return;
+    const currentIndex = draft.editionDrafts.findIndex(
+      (edition) => editionDraftIdentity(edition) === activeEditionIdentity,
+    );
+    const nextEditions = draft.editionDrafts.filter(
+      (edition) => editionDraftIdentity(edition) !== activeEditionIdentity,
+    );
+    const fallback = nextEditions[Math.max(0, currentIndex - 1)] ?? nextEditions[0];
+    setDraft({ ...draft, editionDrafts: nextEditions });
+    setActiveEditionIdentity(fallback ? editionDraftIdentity(fallback) : null);
+  };
+
+  const updateActiveEdition = (nextEdition) => {
+    setDraft({
+      ...draft,
+      editionDrafts: draft.editionDrafts.map((edition) =>
+        editionDraftIdentity(edition) === activeEditionIdentity ? nextEdition : edition,
+      ),
+    });
   };
 
   const submit = async (event) => {
@@ -571,55 +799,120 @@ export function ClientEditor({ initialDraft, mode, onCancel, onSaved, service })
           </label>
         </div>
         <div>
-          <h3>Logo *</h3>
-          {draft.existingLogoPath && !draft.logo && (
-            <p>Logo actual: {draft.existingLogoPath}</p>
-          )}
+          <h3>{editing ? "Logo" : "Logo *"}</h3>
           <FileDropzone
             accept={IMAGE_ACCEPT}
             allowedMimeTypes={IMAGE_MIME_TYPES}
-            items={draft.logo ? [draft.logo] : []}
-            mediaKind="post"
+            editableSingle
+            items={logoItems}
+            mediaKind="logo"
             multiple={false}
-            onChange={(items) => updateField("logo", items[0] ?? null)}
+            onChange={(items) => {
+              const nextLogo = items[0] ?? null;
+              setDraft((current) => {
+                if (!nextLogo) {
+                  return { ...current, logo: null, logoRemoved: false };
+                }
+                if (nextLogo.existing) {
+                  return {
+                    ...current,
+                    logo: null,
+                    logoRemoved: nextLogo.removed,
+                  };
+                }
+                return { ...current, logo: nextLogo, logoRemoved: false };
+              });
+              setErrors((current) => ({ ...current, logo: undefined }));
+            }}
           />
           {errors.logo && <p className="admin-error">{errors.logo}</p>}
         </div>
+        {editing ? (
+          draft.usesEditions && (
+            <p className="admin-notice">Este cliente utiliza ediciones.</p>
+          )
+        ) : (
+          <label className="admin-check admin-use-editions">
+            <input
+              checked={draft.usesEditions}
+              onChange={(event) =>
+                event.target.checked ? enableEditions() : disableEditions()
+              }
+              type="checkbox"
+            />
+            <span>Utilizar ediciones</span>
+          </label>
+        )}
       </Section>
 
-      {draft.editionDrafts.length > 0 && (
-        <aside className="admin-notice">
-          Este cliente usa ediciones especiales. Podés editar su contenido sin
-          convertirlo al formato estándar.
-        </aside>
+      {draft.usesEditions ? (
+        <>
+          <div className="admin-edition-selector">
+            <div
+              aria-label={`Ediciones de ${draft.name || "nuevo cliente"}`}
+              className="admin-edition-tabs"
+              role="tablist"
+            >
+              {draft.editionDrafts.map((edition) => {
+                const identity = editionDraftIdentity(edition);
+                return (
+                  <button
+                    aria-selected={identity === activeEditionIdentity}
+                    key={identity}
+                    onClick={() => setActiveEditionIdentity(identity)}
+                    role="tab"
+                    type="button"
+                  >
+                    {edition.label}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              className="admin-secondary-action admin-add-edition"
+              onClick={addEdition}
+              type="button"
+            >
+              + Agregar edición
+            </button>
+          </div>
+          {activeEdition && (
+            <>
+              <EditionEditor
+                edition={activeEdition}
+                key={activeEditionIdentity}
+                onEditionChange={updateActiveEdition}
+              />
+              {!activeEdition.persistedId && !hasEditionContent(activeEdition) && (
+                <button
+                  className="admin-discard-edition"
+                  onClick={discardActiveEdition}
+                  type="button"
+                >
+                  Descartar edición
+                </button>
+              )}
+            </>
+          )}
+        </>
+      ) : (
+        <>
+          {draft.sectionOrder.map(renderContentSection)}
+          {errors.customSections && (
+            <p className="admin-error">{errors.customSections}</p>
+          )}
+          <AddSectionControl
+            context="root"
+            onAdd={addRootSection}
+            presentTypes={draft.sectionOrder
+              .map((key) => getSectionDefinitionByKey(key)?.type)
+              .filter(Boolean)}
+          />
+        </>
       )}
-
-      {draft.sectionOrder.map(renderContentSection)}
-      {draft.editionDrafts.map((edition, editionIndex) => (
-        <EditionEditor
-          draft={draft}
-          editionIndex={editionIndex}
-          key={edition.id}
-          onDraftChange={setDraft}
-        />
-      ))}
-      {errors.customSections && (
+      {draft.usesEditions && errors.customSections && (
         <p className="admin-error">{errors.customSections}</p>
       )}
-      <button
-        className="admin-secondary-action admin-add-section"
-        onClick={() => {
-          const section = createPendingCustomSection();
-          setDraft({
-            ...draft,
-            customSections: [...draft.customSections, section],
-            sectionOrder: [...draft.sectionOrder, `custom:${section.id}`],
-          });
-        }}
-        type="button"
-      >
-        + Añadir sección
-      </button>
 
       {status && (
         <p aria-live="polite" className="admin-progress">

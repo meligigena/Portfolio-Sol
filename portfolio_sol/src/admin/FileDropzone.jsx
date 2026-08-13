@@ -56,6 +56,7 @@ function ItemPreview({ item }) {
 export function FileDropzone({
   accept,
   allowedMimeTypes,
+  editableSingle = false,
   items,
   mediaKind,
   multiple = true,
@@ -66,6 +67,8 @@ export function FileDropzone({
   const inputRef = useRef(null);
   const [error, setError] = useState("");
   const [validating, setValidating] = useState(false);
+  const hasCurrentItem = items.length > 0;
+  const usesEditableSingleActions = editableSingle || (!multiple && mediaKind === "logo");
 
   const addPendingFiles = (files, details = []) => {
     const pending = files.map((file, index) =>
@@ -165,7 +168,13 @@ export function FileDropzone({
           onClick={() => inputRef.current?.click()}
           type="button"
         >
-          {validating ? "Verificando video…" : "Seleccionar archivos"}
+          {validating
+            ? "Verificando video…"
+            : usesEditableSingleActions && hasCurrentItem
+              ? "Reemplazar"
+              : multiple
+                ? "Seleccionar archivos"
+                : "Seleccionar archivo"}
         </button>
       </div>
       {error && <p className="admin-error" role="alert">{error}</p>}
@@ -193,24 +202,32 @@ export function FileDropzone({
                 </label>
               )}
               <div className="admin-media-entry__actions">
-                <button
-                  aria-label={`Mover ${item.name} hacia arriba`}
-                  disabled={index === 0}
-                  onClick={() => moveItem(index, -1)}
-                  type="button"
-                >
-                  ↑
-                </button>
-                <button
-                  aria-label={`Mover ${item.name} hacia abajo`}
-                  disabled={index === items.length - 1}
-                  onClick={() => moveItem(index, 1)}
-                  type="button"
-                >
-                  ↓
-                </button>
+                {!usesEditableSingleActions && (
+                  <>
+                    <button
+                      aria-label={`Mover ${item.name} hacia arriba`}
+                      disabled={index === 0}
+                      onClick={() => moveItem(index, -1)}
+                      type="button"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      aria-label={`Mover ${item.name} hacia abajo`}
+                      disabled={index === items.length - 1}
+                      onClick={() => moveItem(index, 1)}
+                      type="button"
+                    >
+                      ↓
+                    </button>
+                  </>
+                )}
                 <button onClick={() => removeItem(index)} type="button">
-                  {item.existing && item.removed ? "Conservar" : "Quitar"}
+                  {item.existing && item.removed
+                    ? "Conservar"
+                    : usesEditableSingleActions
+                      ? "Eliminar"
+                      : "Quitar"}
                 </button>
               </div>
             </div>

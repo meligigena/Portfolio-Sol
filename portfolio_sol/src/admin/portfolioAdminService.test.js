@@ -3,7 +3,13 @@ import {
   assertScopedPaths,
   createPortfolioAdminService,
 } from "./portfolioAdminService";
-import { createEmptyAdminDraft } from "./adminDraft";
+import {
+  clientToAdminDraft,
+  createEmptyAdminDraft,
+  createPendingEdition,
+  createPendingEditionSection,
+  createPendingItem,
+} from "./adminDraft";
 
 function incompatibleVideo() {
   const box = (type, payload = new Uint8Array()) => {
@@ -37,6 +43,105 @@ function compatibleVideo() {
 }
 
 describe("admin destructive operations", () => {
+  it("removes an existing logo only after the client was saved without its reference", async () => {
+    const callOrder = [];
+    const remove = vi.fn(async () => {
+      callOrder.push("cleanup");
+      return { error: null };
+    });
+    const rpc = vi.fn(async () => {
+      callOrder.push("save");
+      return { error: null };
+    });
+    const client = {
+      storage: { from: vi.fn(() => ({ upload: vi.fn(), remove })) },
+      rpc,
+    };
+    const service = createPortfolioAdminService(client);
+    const draft = {
+      ...createEmptyAdminDraft(),
+      id: "client-id",
+      slug: "example",
+      storagePrefix: "example",
+      name: "Example",
+      year: "2026",
+      discipline: "Design",
+      existingLogoPath: "example/logo.jpg",
+      logoRemoved: true,
+    };
+
+    await service.saveClient(draft);
+
+    expect(rpc.mock.calls[0][1].p_payload.client.logo_path).toBeNull();
+    expect(remove).toHaveBeenCalledWith(["example/logo.jpg"]);
+    expect(callOrder).toEqual(["save", "cleanup"]);
+  });
+
+  it("does not clean up an existing logo when saving its removal fails", async () => {
+    const remove = vi.fn();
+    const client = {
+      storage: { from: vi.fn(() => ({ upload: vi.fn(), remove })) },
+      rpc: vi.fn().mockResolvedValue({ error: new Error("save failed") }),
+    };
+    const service = createPortfolioAdminService(client);
+    const draft = {
+      ...createEmptyAdminDraft(),
+      id: "client-id",
+      slug: "example",
+      storagePrefix: "example",
+      name: "Example",
+      year: "2026",
+      discipline: "Design",
+      existingLogoPath: "example/logo.jpg",
+      logoRemoved: true,
+    };
+
+    await expect(service.saveClient(draft)).rejects.toThrow("save failed");
+    expect(remove).not.toHaveBeenCalled();
+  });
+
+  it("syncs only the changed persisted edition by its Database id", async () => {
+    const upload = vi.fn();
+    const remove = vi.fn().mockResolvedValue({ error: null });
+    const rpc = vi.fn().mockResolvedValue({ error: null });
+    const client = {
+      storage: { from: vi.fn(() => ({ upload, remove })) },
+      rpc,
+    };
+    const service = createPortfolioAdminService(client);
+    const draft = clientToAdminDraft({
+      id: "client-id",
+      slug: "festival",
+      storagePrefix: "festival",
+      name: "Festival",
+      year: "2026",
+      disciplines: ["Eventos"],
+      cover: "festival/logo.jpg",
+      content: [],
+      editions: Array.from({ length: 3 }, (_, index) => ({
+        id: `edicion-${index + 1}`,
+        databaseId: `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+        editionKey: `edicion-${index + 1}`,
+        label: `Edición ${index + 1}`,
+        sortOrder: index,
+        content: [],
+      })),
+    });
+    draft.editionDrafts[2].label = "Edición 3 actualizada";
+
+    await service.saveClient(draft);
+
+    expect(upload).not.toHaveBeenCalled();
+    expect(rpc).toHaveBeenCalledOnce();
+    expect(rpc.mock.calls[0][0]).toBe("admin_sync_portfolio_client");
+    expect(rpc.mock.calls[0][1].p_payload.editions).toEqual([
+      expect.objectContaining({
+        id: "00000000-0000-4000-8000-000000000003",
+        edition_key: "edicion-3",
+      }),
+    ]);
+  });
+
   it("does not upload or replace Database rows when an existing draft is unchanged", async () => {
     const upload = vi.fn();
     const remove = vi.fn();
@@ -260,6 +365,60 @@ describe("admin destructive operations", () => {
     expect(callOrder).toEqual(["insert", "upload"]);
     expect(upload.mock.calls[0][0]).toMatch(/^new-client\/logo-.+-logo\.png$/);
     expect(insert).toHaveBeenCalledWith(expect.objectContaining({ sort_order: 0 }));
+  });
+
+  it("persists a new client edition tree with each section under its edition", async () => {
+    const upload = vi.fn().mockResolvedValue({ error: null });
+    const remove = vi.fn().mockResolvedValue({ error: null });
+    const single = vi.fn().mockResolvedValue({
+      data: { id: "new-client-id" },
+      error: null,
+    });
+    const insert = vi.fn(() => ({ select: vi.fn(() => ({ single })) }));
+    const rpc = vi.fn().mockResolvedValue({ error: null });
+    const client = {
+      storage: { from: vi.fn(() => ({ upload, remove })) },
+      from: vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({ maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }) })),
+          order: vi.fn(() => ({ limit: vi.fn().mockResolvedValue({ data: [], error: null }) })),
+        })),
+        insert,
+      })),
+      rpc,
+    };
+    const service = createPortfolioAdminService(client);
+    const logo = new File(["logo"], "logo.png", { type: "image/png" });
+    const postFile = new File(["post"], "post.jpg", { type: "image/jpeg" });
+    const firstEdition = createPendingEdition([]);
+    const secondEdition = createPendingEdition([firstEdition]);
+    const postSection = createPendingEditionSection("postGrid");
+    postSection.items.push(createPendingItem(postFile, "post"));
+    secondEdition.sections.push(postSection);
+    const draft = {
+      ...createEmptyAdminDraft(),
+      name: "Festival",
+      year: "2026",
+      discipline: "Eventos",
+      logo,
+      usesEditions: true,
+      editionDrafts: [firstEdition, secondEdition],
+    };
+
+    await service.saveClient(draft);
+
+    expect(rpc.mock.calls[0][0]).toBe("admin_sync_portfolio_client");
+    const payload = rpc.mock.calls[0][1].p_payload;
+    expect(payload.sections).toEqual([]);
+    expect(payload.editions.map((edition) => edition.edition_key)).toEqual([
+      "edicion-1",
+      "edicion-2",
+    ]);
+    expect(payload.editions[0].sections).toEqual([]);
+    expect(payload.editions[1].sections[0]).toMatchObject({
+      section_type: "postGrid",
+      items: [expect.objectContaining({ storage_path: expect.stringContaining("/ediciones/edicion-2/posts/") })],
+    });
   });
 
   it("persists a complete client order with one RPC request", async () => {

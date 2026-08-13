@@ -116,6 +116,67 @@ describe("FileDropzone previews", () => {
     expect(nextObjectUrl).not.toHaveBeenCalled();
   });
 
+  it("shows the persisted logo with explicit replace and remove actions", () => {
+    render(
+      <DropzoneHarness
+        initialItems={[
+          {
+            id: "persisted-logo",
+            existing: true,
+            removed: false,
+            storagePath: "example/logo.jpg",
+            name: "logo.jpg",
+            type: "logo",
+            alt: "Logo actual de Example",
+          },
+        ]}
+        mediaKind="logo"
+        multiple={false}
+      />,
+    );
+
+    expect(screen.getByAltText("Logo actual de Example")).toHaveAttribute(
+      "src",
+      portfolioMediaUrl("example/logo.jpg"),
+    );
+    expect(screen.getByRole("button", { name: "Reemplazar" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Eliminar" })).toBeInTheDocument();
+  });
+
+  it("replaces a remote logo locally without revoking or removing the remote URL", () => {
+    const { container } = render(
+      <DropzoneHarness
+        initialItems={[
+          {
+            id: "persisted-logo",
+            existing: true,
+            removed: false,
+            storagePath: "example/logo.jpg",
+            name: "logo.jpg",
+            type: "logo",
+          },
+        ]}
+        mediaKind="logo"
+        multiple={false}
+      />,
+    );
+    const replacement = new File(["replacement"], "new-logo.png", {
+      type: "image/png",
+    });
+
+    fireEvent.change(container.querySelector('input[type="file"]'), {
+      target: { files: [replacement] },
+    });
+
+    expect(screen.getByAltText("Preview de new-logo.png")).toHaveAttribute(
+      "src",
+      expect.stringMatching(/^blob:preview-/),
+    );
+    expect(URL.revokeObjectURL).not.toHaveBeenCalledWith(
+      portfolioMediaUrl("example/logo.jpg"),
+    );
+  });
+
   it("shows a persisted story companion with its audio control in Admin", () => {
     render(
       <FileDropzone

@@ -66,6 +66,22 @@ describe("admin client validation", () => {
     ).toEqual({});
   });
 
+  it("allows an existing client to remain without a logo", () => {
+    expect(
+      validateClientDraft(
+        {
+          name: "Maja",
+          year: "2024",
+          discipline: "Estética",
+          logo: null,
+          existingLogoPath: null,
+          logoRemoved: true,
+        },
+        { editing: true },
+      ),
+    ).toEqual({});
+  });
+
   it("creates a lowercase accent-free slug", () => {
     expect(slugifyClientName("  Sistemas Móviles  ")).toBe("sistemas-moviles");
   });

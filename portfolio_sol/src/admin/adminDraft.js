@@ -1,32 +1,23 @@
 import { slugifyClientName } from "./adminValidation";
-import { hasRenderableProjectContent } from "../data/projectContent";
+import {
+  hasRenderableContentBlock,
+  hasRenderableProjectContent,
+} from "../data/projectContent";
+import {
+  ADMIN_SECTION_DEFINITIONS,
+  CUSTOM_SECTION_DEFINITION,
+  getSectionDefinitionByType,
+} from "./adminSectionRegistry";
 
-const SECTION_TITLES = {
-  stories: "Stories",
-  posts: "Posts",
-  carousels: "Carruseles",
-  videos: "Videos",
-  catalogs: "Catálogos",
-  banners: "Banners",
-};
+export const STANDARD_SECTION_KEYS = ADMIN_SECTION_DEFINITIONS
+  .filter((definition) => definition.contexts.includes("root"))
+  .map((definition) => definition.key);
 
-export const STANDARD_SECTION_KEYS = [
-  "stories",
-  "posts",
-  "carousels",
-  "videos",
-  "catalogs",
-  "banners",
-];
-
-const SECTION_TYPES = {
-  stories: "storySequence",
-  posts: "postGrid",
-  carousels: "carouselPairs",
-  videos: "videoStack",
-  catalogs: "catalogPair",
-  banners: "banners",
-};
+const SECTION_TITLES = Object.fromEntries(
+  ADMIN_SECTION_DEFINITIONS
+    .filter((definition) => definition.key)
+    .map((definition) => [definition.key, definition.label]),
+);
 
 function draftId(prefix) {
   return `${prefix}-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`}`;
@@ -41,6 +32,7 @@ export function createEmptyAdminDraft() {
     discipline: "",
     existingLogoPath: null,
     logo: null,
+    logoRemoved: false,
     published: true,
     comingSoon: false,
     sortOrder: null,
@@ -54,6 +46,7 @@ export function createEmptyAdminDraft() {
     customSections: [],
     sectionOrder: [...STANDARD_SECTION_KEYS],
     sectionConfig: {},
+    usesEditions: false,
     editionDrafts: [],
   };
 }
@@ -130,7 +123,11 @@ function existingItem(item) {
 }
 
 function blockItems(client, type) {
-  return client.content?.find((block) => block.type === type)?.items ?? [];
+  return (
+    client.content?.find(
+      (block) => block.type === type && hasRenderableContentBlock(block),
+    )?.items ?? []
+  );
 }
 
 function groupDraft(group, kind) {
@@ -154,6 +151,8 @@ function editionSectionDraft(block) {
     presentation: block.presentation,
     items: (block.items ?? []).map(existingItem),
     groups: [],
+    existing: true,
+    removed: false,
   };
 
   if (block.type === "mediaRows") {
@@ -178,29 +177,101 @@ function editionSectionDraft(block) {
   return base;
 }
 
-function editionDraft(edition) {
-  return {
-    id: edition.id,
+function editionDraft(edition, index) {
+  const editionKey = edition.editionKey ?? edition.id;
+  const fallbackNumber = Number.parseInt(
+    String(edition.label ?? editionKey).match(/(\d+)(?!.*\d)/)?.[1] ?? "",
+    10,
+  );
+  const nextEdition = {
+    tempId: null,
+    persistedId: edition.databaseId ?? edition.persistedId ?? null,
+    editionKey,
+    number: Number.isFinite(edition.number) ? edition.number : fallbackNumber,
     label: normalizeAdminText(edition.label),
     originalLabel: edition.label,
+    sortOrder: edition.sortOrder ?? index,
     config: edition.config ?? {},
     comingSoon: edition.comingSoon,
-    sections: (edition.content ?? []).map(editionSectionDraft),
+    sections: (edition.content ?? [])
+      .filter(hasRenderableContentBlock)
+      .map(editionSectionDraft),
+  };
+  nextEdition.originalDraftSignature = editionDraftSignature(nextEdition);
+  return nextEdition;
+}
+
+function editionDraftSignature(edition) {
+  const { originalDraftSignature: _signature, ...comparable } = edition;
+  return JSON.stringify(comparable);
+}
+
+export function hasEditionDraftChanges(edition) {
+  return (
+    !edition.persistedId ||
+    !edition.originalDraftSignature ||
+    editionDraftSignature(edition) !== edition.originalDraftSignature
+  );
+}
+
+export function editionDraftIdentity(edition) {
+  return edition.persistedId ?? edition.tempId ?? edition.editionKey;
+}
+
+export function createPendingEditionSection(type) {
+  const definition = getSectionDefinitionByType(type);
+
+  return {
+    id: draftId("edition-section"),
+    type,
+    title: type === CUSTOM_SECTION_DEFINITION.type ? "" : definition?.label ?? type,
+    originalTitle: null,
+    config: { ...(definition?.initialConfig ?? {}) },
+    presentation: definition?.initialConfig?.presentation,
+    items: [],
+    groups: [],
+    existing: false,
+    removed: false,
+  };
+}
+
+export function createPendingEdition(editions = []) {
+  const maxNumber = editions.reduce(
+    (maximum, edition) =>
+      Number.isFinite(edition.number) ? Math.max(maximum, edition.number) : maximum,
+    0,
+  );
+  const maxSortOrder = editions.reduce(
+    (maximum, edition) => Math.max(maximum, edition.sortOrder ?? -1),
+    -1,
+  );
+  const number = maxNumber + 1;
+
+  return {
+    tempId: draftId("edition"),
+    persistedId: null,
+    editionKey: `edicion-${number}`,
+    number,
+    label: `Edición ${number}`,
+    originalLabel: null,
+    sortOrder: maxSortOrder + 1,
+    config: {},
+    comingSoon: true,
+    sections: [],
   };
 }
 
 export function clientToAdminDraft(client) {
   const draft = createEmptyAdminDraft();
-  const storyBlock = client.content?.find((block) => block.type === "storySequence");
-  const bannerBlock = client.content?.find((block) => block.type === "banners");
+  const renderableContent = (client.content ?? []).filter(hasRenderableContentBlock);
+  const storyBlock = renderableContent.find((block) => block.type === "storySequence");
+  const bannerBlock = renderableContent.find((block) => block.type === "banners");
   const storagePrefix = client.storagePrefix ?? client.slug;
   const sectionOrder = [];
   const customSections = [];
 
-  (client.content ?? []).forEach((block) => {
-    const standardKey = Object.entries(SECTION_TYPES).find(
-      ([, type]) => type === block.type,
-    )?.[0];
+  renderableContent.forEach((block) => {
+    const standardKey = getSectionDefinitionByType(block.type)?.key;
     if (standardKey) {
       if (!sectionOrder.includes(standardKey)) sectionOrder.push(standardKey);
       return;
@@ -222,10 +293,6 @@ export function clientToAdminDraft(client) {
       sectionOrder.push(`custom:${custom.id}`);
     }
   });
-  STANDARD_SECTION_KEYS.forEach((key) => {
-    if (!sectionOrder.includes(key)) sectionOrder.push(key);
-  });
-
   const nextDraft = {
     ...draft,
     id: client.id,
@@ -235,6 +302,7 @@ export function clientToAdminDraft(client) {
     year: client.year,
     discipline: client.disciplines?.join(" / ") ?? "",
     existingLogoPath: client.cover,
+    logoRemoved: false,
     published: client.published !== false,
     comingSoon: !hasRenderableProjectContent(client),
     sortOrder: client.sortOrder ?? null,
@@ -262,6 +330,7 @@ export function clientToAdminDraft(client) {
           }
         : {},
     },
+    usesEditions: (client.editions ?? []).length > 0,
     editionDrafts: (client.editions ?? []).map(editionDraft),
   };
   nextDraft.originalDraftSignature = draftSignature(nextDraft);
@@ -380,6 +449,7 @@ function originalText(current, original) {
 function serializeEditionSection(section, resolvedPaths) {
   const groups = active(section.groups ?? [])
     .map((group) => ({
+      id: group.existing ? group.id : undefined,
       group_kind:
         group.kind ??
         (section.type === "mediaRows"
@@ -406,6 +476,7 @@ function serializeEditionSection(section, resolvedPaths) {
   }
 
   return {
+    id: section.existing ? section.id : undefined,
     section_type: section.type,
     title: originalText(section.title, section.originalTitle),
     config: {
@@ -417,7 +488,11 @@ function serializeEditionSection(section, resolvedPaths) {
   };
 }
 
-export function buildClientPayload(draft, resolvedPaths = new Map()) {
+export function buildClientPayload(
+  draft,
+  resolvedPaths = new Map(),
+  { changedOnly = false } = {},
+) {
   const storyConfig = draft.sectionConfig.storySequence ?? {};
   const sectionsByKey = {
     stories: directSection(
@@ -507,25 +582,34 @@ export function buildClientPayload(draft, resolvedPaths = new Map()) {
   }
 
   const slug = draft.slug || slugifyClientName(draft.name);
-  const editions = (draft.editionDrafts ?? []).map((edition, index) => {
+  const editions = (draft.usesEditions ? draft.editionDrafts ?? [] : [])
+    .filter((edition) => !changedOnly || hasEditionDraftChanges(edition))
+    .map((edition) => {
     const editionSections = edition.sections
+      .filter((section) => !section.removed)
       .map((section) => serializeEditionSection(section, resolvedPaths))
       .filter(
         (section) => section.items.length > 0 || section.groups.length > 0,
       );
 
     return {
-      edition_key: edition.id,
+      id: edition.persistedId ?? undefined,
+      edition_key: edition.editionKey,
       label: originalText(edition.label, edition.originalLabel),
-      sort_order: index,
+      sort_order: edition.sortOrder,
       coming_soon: !hasRenderableProjectContent({ content: editionSections }),
       config: edition.config ?? {},
       sections: editionSections,
     };
-  });
+    });
+  const allEditionSections = (draft.editionDrafts ?? []).map((edition) => ({
+    content: edition.sections
+      .filter((section) => !section.removed)
+      .map((section) => serializeEditionSection(section, resolvedPaths)),
+  }));
   const effectiveComingSoon = !hasRenderableProjectContent({
-    content: sections,
-    editions: editions.map((edition) => ({ content: edition.sections })),
+    content: draft.usesEditions ? [] : sections,
+    editions: draft.usesEditions ? allEditionSections : [],
   });
 
   return {
@@ -535,13 +619,17 @@ export function buildClientPayload(draft, resolvedPaths = new Map()) {
       name: draft.name.trim(),
       year: String(draft.year).trim(),
       disciplines: [draft.discipline.trim()],
-      logo_path: draft.logo ? resolvedPaths.get("logo") : draft.existingLogoPath,
+      logo_path: draft.logo
+        ? resolvedPaths.get("logo")
+        : draft.logoRemoved
+          ? null
+          : draft.existingLogoPath,
       sort_order: draft.sortOrder,
       published: draft.published !== false,
       coming_soon: effectiveComingSoon,
       config: {},
     },
-    sections,
+    sections: draft.usesEditions ? [] : sections,
     editions,
   };
 }

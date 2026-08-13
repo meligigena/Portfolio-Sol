@@ -176,7 +176,10 @@ export function mapPortfolioRowsToClients(rows) {
       const editionContent = mapSections(edition.portfolio_sections);
       const mappedEdition = {
         id: edition.edition_key,
+        databaseId: edition.id,
+        editionKey: edition.edition_key,
         label: edition.label,
+        sortOrder: edition.sort_order,
         content: editionContent.length > 0 ? editionContent : undefined,
         ...edition.config,
       };

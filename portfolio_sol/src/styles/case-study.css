@@ -81,6 +81,10 @@
 .case-study__edition-tabs {
   display: flex;
   border-top: 1px solid currentColor;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+  touch-action: pan-x;
 }
 
 .case-study__edition-tab {
@@ -98,6 +102,8 @@
   line-height: 1.2;
   text-transform: uppercase;
   transition: background-color 180ms ease, color 180ms ease;
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .case-study__edition-tab[aria-selected="true"],
@@ -808,12 +814,11 @@
   }
 
   .case-study__edition-tabs {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
   }
 
   .case-study__edition-tab {
-    width: 100%;
+    width: auto;
     padding-inline: 0.75rem;
   }
 

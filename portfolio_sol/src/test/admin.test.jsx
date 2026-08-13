@@ -398,6 +398,284 @@ describe("private portfolio admin", () => {
     expect(screen.getByText("dos.png")).toBeInTheDocument();
   });
 
+  it("hides empty persisted sections and offers only missing standard sections", async () => {
+    const user = { id: "admin-user" };
+    const client = {
+      id: "client-id",
+      slug: "example",
+      storagePrefix: "example",
+      name: "Example",
+      year: "2026",
+      disciplines: ["Design"],
+      cover: "example/logo.jpg",
+      content: [
+        {
+          id: "posts",
+          type: "postGrid",
+          title: "Posts",
+          items: [
+            { id: "post", type: "post", src: "example/posts/one.jpg" },
+          ],
+        },
+        { id: "empty-stories", type: "storySequence", title: "Stories", items: [] },
+      ],
+      editions: [],
+    };
+    const service = createService({
+      getSession: vi.fn().mockResolvedValue({ user }),
+      isAdmin: vi.fn().mockResolvedValue(true),
+      listClients: vi.fn().mockResolvedValue([client]),
+    });
+    render(<AdminPage service={service} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Modificar cliente/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /Example/ }));
+
+    expect(screen.getByRole("heading", { level: 2, name: "Posts" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 2, name: "Stories" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 2, name: "Videos" })).not.toBeInTheDocument();
+
+    const selector = screen.getByLabelText("Tipo de sección");
+    expect([...selector.options].map((option) => option.textContent)).toEqual([
+      "Stories",
+      "Carruseles",
+      "Videos",
+      "Catálogos",
+      "Banners",
+      "Sección personalizada",
+    ]);
+    fireEvent.change(selector, { target: { value: "videoStack" } });
+    fireEvent.click(screen.getByRole("button", { name: "+ Añadir sección" }));
+
+    expect(screen.getByRole("heading", { level: 2, name: "Videos" })).toBeInTheDocument();
+    expect([...screen.getByLabelText("Tipo de sección").options].map((option) => option.value)).not.toContain(
+      "videoStack",
+    );
+  });
+
+  it("calculates missing sections independently for the active edition", async () => {
+    const user = { id: "admin-user" };
+    const client = {
+      id: "festival-id",
+      slug: "festival",
+      storagePrefix: "festival",
+      name: "Festival",
+      year: "2026",
+      disciplines: ["Eventos"],
+      cover: "festival/logo.jpg",
+      content: [],
+      editions: [
+        {
+          id: "edicion-1",
+          databaseId: "edition-1",
+          editionKey: "edicion-1",
+          label: "Edición 1",
+          sortOrder: 0,
+          content: [
+            {
+              id: "posts",
+              type: "postGrid",
+              title: "Posts",
+              items: [{ id: "post", type: "post", src: "festival/posts/one.jpg" }],
+            },
+          ],
+        },
+        {
+          id: "edicion-2",
+          databaseId: "edition-2",
+          editionKey: "edicion-2",
+          label: "Edición 2",
+          sortOrder: 1,
+          content: [
+            {
+              id: "videos",
+              type: "videoStack",
+              title: "Videos",
+              items: [{ id: "video", type: "video", src: "festival/videos/one.mp4" }],
+            },
+          ],
+        },
+      ],
+    };
+    const service = createService({
+      getSession: vi.fn().mockResolvedValue({ user }),
+      isAdmin: vi.fn().mockResolvedValue(true),
+      listClients: vi.fn().mockResolvedValue([client]),
+    });
+    render(<AdminPage service={service} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Modificar cliente/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /Festival/ }));
+
+    expect([...screen.getByLabelText("Tipo de sección").options].map((option) => option.value)).not.toContain(
+      "postGrid",
+    );
+    fireEvent.click(screen.getByRole("tab", { name: "Edición 2" }));
+    expect([...screen.getByLabelText("Tipo de sección").options].map((option) => option.value)).toContain(
+      "postGrid",
+    );
+  });
+
+  it("shows the current logo and discards replace or remove drafts on Cancel", async () => {
+    const user = { id: "admin-user" };
+    const client = {
+      id: "client-id",
+      slug: "example",
+      storagePrefix: "example",
+      name: "Example",
+      year: "2026",
+      disciplines: ["Design"],
+      cover: "example/logo.jpg",
+      content: [],
+      editions: [],
+    };
+    const service = createService({
+      getSession: vi.fn().mockResolvedValue({ user }),
+      isAdmin: vi.fn().mockResolvedValue(true),
+      listClients: vi.fn().mockResolvedValue([client]),
+    });
+    render(<AdminPage service={service} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Modificar cliente/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /Example/ }));
+    expect(screen.getByAltText("Logo actual de Example")).toBeInTheDocument();
+    const replacement = new File(["replacement"], "replacement.png", {
+      type: "image/png",
+    });
+    fireEvent.change(document.querySelector('input[type="file"]'), {
+      target: { files: [replacement] },
+    });
+    expect(screen.getByAltText("Preview de replacement.png")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+
+    expect(service.saveClient).not.toHaveBeenCalled();
+    fireEvent.click(await screen.findByRole("button", { name: /Modificar cliente/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /Example/ }));
+    expect(screen.getByAltText("Logo actual de Example")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Eliminar" }));
+    expect(screen.getByText("Se eliminará al confirmar")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+
+    expect(service.saveClient).not.toHaveBeenCalled();
+    fireEvent.click(await screen.findByRole("button", { name: /Modificar cliente/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /Example/ }));
+    expect(screen.getByAltText("Logo actual de Example")).toBeInTheDocument();
+  });
+
+  it("creates and discards arbitrary local editions without losing tab drafts", async () => {
+    const user = { id: "admin-user" };
+    const service = createService({
+      getSession: vi.fn().mockResolvedValue({ user }),
+      isAdmin: vi.fn().mockResolvedValue(true),
+    });
+    render(<AdminPage service={service} />);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: /adir nuevo cliente/i }),
+    );
+
+    const usesEditions = screen.getByRole("checkbox", {
+      name: "Utilizar ediciones",
+    });
+    expect(usesEditions).not.toBeChecked();
+    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+
+    fireEvent.click(usesEditions);
+    expect(screen.getByRole("tab", { name: "Edición 1" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "+ Agregar edición" }));
+    fireEvent.change(screen.getByLabelText("Tipo de sección"), {
+      target: { value: "storySequence" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "+ Añadir sección" }));
+    const story = new File(["story"], "story-edicion-2.jpg", {
+      type: "image/jpeg",
+    });
+    const editionFileInputs = document.querySelectorAll('input[type="file"]');
+    fireEvent.change(editionFileInputs[editionFileInputs.length - 1], {
+      target: { files: [story] },
+    });
+
+    fireEvent.click(screen.getByRole("tab", { name: "Edición 1" }));
+    expect(screen.queryByText("story-edicion-2.jpg")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Edición 2" }));
+    expect(screen.getByText("story-edicion-2.jpg")).toBeInTheDocument();
+
+    for (let index = 0; index < 4; index += 1) {
+      fireEvent.click(screen.getByRole("button", { name: "+ Agregar edición" }));
+    }
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "Edición 1",
+      "Edición 2",
+      "Edición 3",
+      "Edición 4",
+      "Edición 5",
+      "Edición 6",
+    ]);
+    fireEvent.click(screen.getByRole("button", { name: "Descartar edición" }));
+    expect(screen.queryByRole("tab", { name: "Edición 6" })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("tab")).toHaveLength(5);
+  });
+
+  it("reconstructs six persisted editions in sort order and isolates their content", async () => {
+    const user = { id: "admin-user" };
+    const festival = {
+      id: "festival-id",
+      slug: "festival",
+      storagePrefix: "festival",
+      name: "Festival",
+      year: "2026",
+      disciplines: ["Eventos"],
+      cover: "festival/logo.jpg",
+      content: [],
+      editions: Array.from({ length: 6 }, (_, index) => ({
+        id: `edicion-${index + 1}`,
+        databaseId: `edition-db-${index + 1}`,
+        editionKey: `edicion-${index + 1}`,
+        label: `Edición ${index + 1}`,
+        sortOrder: index,
+        content: index === 3
+          ? [{
+              id: "edition-four-posts",
+              type: "postGrid",
+              title: "Posts Edición 4",
+              items: [{
+                id: "edition-four-post",
+                type: "post",
+                src: "festival/edicion-4/post.jpg",
+                alt: "Contenido exclusivo de Edición 4",
+              }],
+            }]
+          : [],
+      })),
+    };
+    const service = createService({
+      getSession: vi.fn().mockResolvedValue({ user }),
+      isAdmin: vi.fn().mockResolvedValue(true),
+      listClients: vi.fn().mockResolvedValue([festival]),
+    });
+    render(<AdminPage service={service} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Modificar cliente/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /Festival/ }));
+
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "Edición 1",
+      "Edición 2",
+      "Edición 3",
+      "Edición 4",
+      "Edición 5",
+      "Edición 6",
+    ]);
+    expect(screen.queryByText("post.jpg")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Edición 4" }));
+    expect(screen.getByText("post.jpg")).toBeInTheDocument();
+    expect(screen.getAllByText("post.jpg")).toHaveLength(1);
+  });
+
   it("shows Tardeo Edition 1 posts and stories exactly once in the editor", async () => {
     const user = { id: "admin-user" };
     const tardeo = {

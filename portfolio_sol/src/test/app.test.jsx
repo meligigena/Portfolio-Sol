@@ -86,6 +86,24 @@ afterEach(() => {
 });
 
 describe("portfolio routes", () => {
+  it("renders a client without a logo without a broken image or technical placeholder", async () => {
+    const client = getClientBySlug("rambla");
+    const originalCover = client.cover;
+    client.cover = null;
+
+    try {
+      renderRoute("/");
+      await screen.findByRole("heading", { level: 1, name: "PORTFOLIO" });
+      const card = screen.getByRole("link", { name: "Rambla" });
+
+      expect(card.querySelector("img")).not.toBeInTheDocument();
+      expect(card).not.toHaveTextContent("ASSET");
+      expect(card).not.toHaveTextContent("PENDIENTE");
+    } finally {
+      client.cover = originalCover;
+    }
+  });
+
   it.each([
     ["/sobre-mi", "#sobre-mi"],
     ["/contacto", "#contacto"],

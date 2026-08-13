@@ -46,12 +46,24 @@ export function validateClientDraft(draft, { editing = false } = {}) {
   if (!draft.discipline?.trim()) {
     errors.discipline = "El rubro o disciplina es obligatorio.";
   }
-  if (!draft.logo && !(editing && draft.existingLogoPath)) {
+  if (!draft.logo && !editing) {
     errors.logo = "El logo es obligatorio.";
   }
   if (
     draft.customSections?.some(
       (section) => !section.removed && !section.title?.trim(),
+    )
+  ) {
+    errors.customSections = "Cada sección personalizada necesita un nombre.";
+  }
+  if (
+    draft.editionDrafts?.some((edition) =>
+      edition.sections.some(
+        (section) =>
+          !section.removed &&
+          section.type === "customMedia" &&
+          !section.title?.trim(),
+      ),
     )
   ) {
     errors.customSections = "Cada sección personalizada necesita un nombre.";

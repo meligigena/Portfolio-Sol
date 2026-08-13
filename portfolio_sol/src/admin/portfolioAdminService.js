@@ -34,11 +34,11 @@ function itemFolder(item, draft) {
   for (const edition of draft.editionDrafts ?? []) {
     for (const section of edition.sections) {
       if (section.items?.includes(item) || section.companionVideo === item) {
-        return `ediciones/${edition.id}/${slugifyClientName(section.title)}`;
+        return `ediciones/${edition.editionKey}/${slugifyClientName(section.title)}`;
       }
       const group = section.groups?.find((entry) => entry.items.includes(item));
       if (group) {
-        return `ediciones/${edition.id}/${slugifyClientName(section.title)}/${slugifyClientName(group.label)}`;
+        return `ediciones/${edition.editionKey}/${slugifyClientName(section.title)}/${slugifyClientName(group.label)}`;
       }
     }
   }
@@ -204,7 +204,7 @@ export function createPortfolioAdminService(
               name: draft.name.trim(),
               year: String(draft.year).trim(),
               disciplines: [draft.discipline.trim()],
-              logo_path: `${storagePrefix}/pending-logo`,
+              logo_path: null,
               sort_order: sortOrder,
               published: false,
             })
@@ -255,9 +255,12 @@ export function createPortfolioAdminService(
         const payload = buildClientPayload(
           { ...draft, slug, storagePrefix, sortOrder },
           resolvedPaths,
+          { changedOnly: !isNew },
         );
         const { error: saveError } = await client.rpc(
-          "admin_replace_portfolio_client",
+          draft.usesEditions
+            ? "admin_sync_portfolio_client"
+            : "admin_replace_portfolio_client",
           { p_client_id: clientId, p_payload: payload },
         );
         if (saveError) throw saveError;
@@ -270,7 +273,9 @@ export function createPortfolioAdminService(
           ...allDraftItems(draft)
             .map((item) => item.replacedStoragePath)
             .filter(Boolean),
-          ...(draft.logo && draft.existingLogoPath ? [draft.existingLogoPath] : []),
+          ...((draft.logo || draft.logoRemoved) && draft.existingLogoPath
+            ? [draft.existingLogoPath]
+            : []),
         ];
         assertScopedPaths(removedPaths, storagePrefix);
         const cleanupWarnings = [];

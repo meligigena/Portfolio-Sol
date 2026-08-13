@@ -33,7 +33,7 @@ export function PortfolioRail() {
 
         <div className="portfolio-rail__stage">
           <div ref={trackRef} className="portfolio-rail__track">
-            {clients.map((client, index) => (
+            {clients.map((client) => (
               <article
                 className="client-card"
                 data-client-card
@@ -57,13 +57,7 @@ export function PortfolioRail() {
                         loading="lazy"
                         decoding="async"
                       />
-                    ) : (
-                      <>
-                        <span>ASSET</span>
-                        <span>PENDIENTE</span>
-                        <span>{String(index + 1).padStart(2, "0")}</span>
-                      </>
-                    )}
+                    ) : null}
                   </div>
                   <div className="client-card__meta">
                     <h3>{client.name}</h3>

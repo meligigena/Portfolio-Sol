@@ -4,6 +4,8 @@ import {
   buildClientPayload,
   clientToAdminDraft,
   createEmptyAdminDraft,
+  createPendingEdition,
+  createPendingEditionSection,
   createPendingGroup,
   createPendingCustomSection,
   hasAdminDraftChanges,
@@ -27,6 +29,243 @@ function existingItem(id, type, storagePath, removed = false) {
 }
 
 describe("admin CRUD payloads", () => {
+  it("does not hydrate persisted standard or custom sections without renderable media", () => {
+    const draft = clientToAdminDraft({
+      id: "client-id",
+      slug: "example",
+      storagePrefix: "example",
+      name: "Example",
+      year: "2026",
+      disciplines: ["Design"],
+      cover: "example/logo.jpg",
+      content: [
+        { id: "empty-posts", type: "postGrid", title: "Posts", items: [] },
+        {
+          id: "posts",
+          type: "postGrid",
+          title: "Posts",
+          items: [
+            {
+              id: "post",
+              type: "post",
+              src: "example/posts/one.jpg",
+            },
+          ],
+        },
+        {
+          id: "empty-custom",
+          type: "customMedia",
+          title: "Packaging",
+          items: [],
+        },
+      ],
+      editions: [],
+    });
+
+    expect(draft.sectionOrder).toEqual(["posts"]);
+    expect(draft.posts).toHaveLength(1);
+    expect(draft.customSections).toEqual([]);
+  });
+
+  it("does not hydrate persisted empty sections inside editions", () => {
+    const draft = clientToAdminDraft({
+      id: "client-id",
+      slug: "festival",
+      storagePrefix: "festival",
+      name: "Festival",
+      year: "2026",
+      disciplines: ["Eventos"],
+      cover: "festival/logo.jpg",
+      content: [],
+      editions: [
+        {
+          id: "edicion-1",
+          databaseId: "00000000-0000-4000-8000-000000000001",
+          editionKey: "edicion-1",
+          label: "Edición 1",
+          sortOrder: 0,
+          content: [
+            { id: "empty-posts", type: "postGrid", title: "Posts", items: [] },
+            {
+              id: "stories",
+              type: "storySequence",
+              title: "Stories",
+              items: [
+                {
+                  id: "story",
+                  type: "story",
+                  src: "festival/stories/one.jpg",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(draft.editionDrafts[0].sections.map((section) => section.type)).toEqual([
+      "storySequence",
+    ]);
+  });
+
+  it("keeps a newly added empty section in the draft but omits it from the payload", () => {
+    const section = createPendingEditionSection("postGrid");
+    const edition = createPendingEdition();
+    edition.sections.push(section);
+    const draft = {
+      ...createEmptyAdminDraft(),
+      name: "Festival",
+      year: "2026",
+      discipline: "Eventos",
+      existingLogoPath: "festival/logo.jpg",
+      usesEditions: true,
+      editionDrafts: [edition],
+    };
+
+    expect(edition.sections).toEqual([expect.objectContaining({ type: "postGrid" })]);
+    expect(buildClientPayload(draft).editions[0].sections).toEqual([]);
+  });
+
+  it("omits a persisted standard section after its last file is removed", () => {
+    const draft = clientToAdminDraft({
+      id: "client-id",
+      slug: "example",
+      storagePrefix: "example",
+      name: "Example",
+      year: "2026",
+      disciplines: ["Design"],
+      cover: "example/logo.jpg",
+      content: [
+        {
+          id: "posts",
+          type: "postGrid",
+          title: "Posts",
+          items: [
+            { id: "post", type: "post", src: "example/posts/one.jpg" },
+          ],
+        },
+      ],
+      editions: [],
+    });
+    draft.posts[0].removed = true;
+
+    expect(buildClientPayload(draft).sections).toEqual([]);
+  });
+
+  it("hydrates a nullable logo and serializes an explicit logo removal", () => {
+    const draft = clientToAdminDraft({
+      id: "client-id",
+      slug: "example",
+      storagePrefix: "example",
+      name: "Example",
+      year: "2026",
+      disciplines: ["Design"],
+      cover: "example/logo.jpg",
+      content: [],
+      editions: [],
+    });
+
+    expect(draft).toMatchObject({
+      existingLogoPath: "example/logo.jpg",
+      logo: null,
+      logoRemoved: false,
+    });
+    expect(buildClientPayload({ ...draft, logoRemoved: true }).client.logo_path).toBeNull();
+  });
+
+  it("creates unlimited draft editions with safe identities and max-number sequencing", () => {
+    const editions = [1, 2, 4, 5, 6].map((number, index) => ({
+      id: `persisted-${number}`,
+      persistedId: `00000000-0000-4000-8000-${String(number).padStart(12, "0")}`,
+      editionKey: `edicion-${number}`,
+      label: `Edición ${number}`,
+      number,
+      sortOrder: index,
+      sections: [],
+    }));
+
+    const next = createPendingEdition(editions);
+
+    expect(next).toMatchObject({
+      persistedId: null,
+      editionKey: "edicion-7",
+      label: "Edición 7",
+      number: 7,
+      sortOrder: 5,
+      sections: [],
+    });
+    expect(next.tempId).toMatch(/^edition-/);
+    expect(next.tempId).not.toBe(next.editionKey);
+  });
+
+  it("hydrates persisted edition ids and serializes only changed editions when requested", () => {
+    const draft = clientToAdminDraft({
+      id: "client-id",
+      slug: "festival",
+      storagePrefix: "festival",
+      name: "Festival",
+      year: "2026",
+      disciplines: ["Eventos"],
+      cover: "festival/logo.jpg",
+      content: [],
+      editions: Array.from({ length: 6 }, (_, index) => ({
+        id: `edicion-${index + 1}`,
+        databaseId: `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+        editionKey: `edicion-${index + 1}`,
+        label: `Edición ${index + 1}`,
+        sortOrder: index,
+        content: [],
+      })),
+    });
+
+    expect(draft.usesEditions).toBe(true);
+    expect(draft.editionDrafts).toHaveLength(6);
+    expect(draft.editionDrafts[0].persistedId).toBe(
+      "00000000-0000-4000-8000-000000000001",
+    );
+
+    draft.editionDrafts[4].sections.push(createPendingEditionSection("postGrid"));
+    const payload = buildClientPayload(draft, new Map(), { changedOnly: true });
+
+    expect(payload.editions).toHaveLength(1);
+    expect(payload.editions[0]).toMatchObject({
+      id: "00000000-0000-4000-8000-000000000005",
+      edition_key: "edicion-5",
+      sort_order: 4,
+    });
+  });
+
+  it("keeps a normal new client edition-free by default", () => {
+    const draft = createEmptyAdminDraft();
+
+    expect(draft.usesEditions).toBe(false);
+    expect(draft.editionDrafts).toEqual([]);
+    expect(buildClientPayload(draft).editions).toEqual([]);
+  });
+
+  it("adds a new incremental RPC migration without deleting persisted editions", () => {
+    const migration = readFileSync(
+      "supabase/migrations/20260813150000_incremental_portfolio_editions.sql",
+      "utf8",
+    );
+
+    expect(migration).toContain("admin_sync_portfolio_client");
+    expect(migration).toContain("edition_payload ->> 'id'");
+    expect(migration).not.toMatch(/delete from public\.portfolio_editions/i);
+    expect(migration).not.toMatch(/disable row level security/i);
+  });
+
+  it("adds a new minimal migration that allows clients without a logo", () => {
+    const migration = readFileSync(
+      "supabase/migrations/20260813170000_nullable_portfolio_client_logo.sql",
+      "utf8",
+    );
+
+    expect(migration).toMatch(/alter column logo_path drop not null/i);
+    expect(migration).not.toMatch(/disable row level security/i);
+    expect(migration).not.toMatch(/drop table/i);
+  });
+
   it("uses storagePrefix instead of deriving it from logo_path", () => {
     const draft = clientToAdminDraft({
       id: "client-id",

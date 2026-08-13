@@ -5,6 +5,26 @@ import {
 } from "./portfolioDatabase";
 
 describe("portfolio database mapping", () => {
+  it("maps a client without a logo without creating an invalid media path", () => {
+    const [client] = mapPortfolioRowsToClients([
+      {
+        id: "no-logo",
+        slug: "no-logo",
+        name: "No Logo",
+        year: "2026",
+        disciplines: ["Design"],
+        logo_path: null,
+        sort_order: 0,
+        published: true,
+        config: {},
+        portfolio_editions: [],
+        portfolio_sections: [],
+      },
+    ]);
+
+    expect(client.cover).toBeNull();
+  });
+
   it("uses sort_order as the only client ordering source and exposes it to Admin", () => {
     const rows = [
       { id: "third", slug: "aaa", name: "AAA", sort_order: 2 },
@@ -251,6 +271,11 @@ describe("portfolio database mapping", () => {
       "edicion-1",
       "edicion-2",
     ]);
+    expect(client.editions.map((edition) => edition.databaseId)).toEqual([
+      "edition-1",
+      "edition-2",
+    ]);
+    expect(client.editions.map((edition) => edition.sortOrder)).toEqual([0, 1]);
     expect(client.editions[0].content[0].type).toBe("mediaRows");
     expect(client.editions[1].comingSoon).toBe(true);
   });
