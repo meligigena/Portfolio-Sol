@@ -25,12 +25,22 @@ describe("portfolio media and motion enhancements", () => {
     expect(mobile).toContain("line-height: 0.88");
   });
 
-  it("uses scoped batched card reveals with reduced-motion exclusion and cleanup", () => {
+  it("keeps desktop rail motion unchanged and uses scrubbed card motion only on mobile", () => {
     const source = readFileSync("src/animations/usePortfolioRail.js", "utf8");
+    const desktopStart = source.indexOf('"(min-width: 64rem)');
+    const mobileStart = source.indexOf('"(max-width: 63.99rem)');
+    const desktopMotion = source.slice(desktopStart, mobileStart);
+    const mobileMotion = source.slice(mobileStart);
 
-    expect(source).toContain("[data-client-card]");
-    expect(source).toContain("ScrollTrigger.batch");
-    expect(source).toContain("prefers-reduced-motion: no-preference");
+    expect(desktopMotion).not.toContain("[data-client-card]");
+    expect(desktopMotion).not.toContain("gsap.fromTo");
+    expect(source).not.toContain("ScrollTrigger.batch");
+    expect(mobileMotion).toContain("[data-client-card]");
+    expect(mobileMotion).toContain("scrub: 0.6");
+    expect(mobileMotion).toContain("autoAlpha: 0.9");
+    expect(mobileMotion).toContain("y: 18");
+    expect(mobileMotion).toContain("scale: 0.985");
+    expect(mobileMotion).toContain("prefers-reduced-motion: no-preference");
     expect(source).toContain("media.revert()");
     expect(source).toContain("scope: sectionRef");
   });

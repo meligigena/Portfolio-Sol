@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { gsap, ScrollTrigger, useGSAP } from "./gsap";
+import { gsap, useGSAP } from "./gsap";
 
 export function usePortfolioRail(clientCount) {
   const sectionRef = useRef(null);
@@ -17,7 +17,6 @@ export function usePortfolioRail(clientCount) {
           const section = sectionRef.current;
           const viewport = viewportRef.current;
           const track = trackRef.current;
-          const cards = gsap.utils.toArray("[data-client-card]", section);
           let currentIndex = -1;
 
           const getDistance = () =>
@@ -47,18 +46,6 @@ export function usePortfolioRail(clientCount) {
                     2,
                     "0",
                   );
-                  gsap.fromTo(
-                    cards[nextIndex],
-                    { autoAlpha: 0.75, y: 24, scale: 0.985 },
-                    {
-                      autoAlpha: 1,
-                      y: 0,
-                      scale: 1,
-                      duration: 0.45,
-                      ease: "power2.out",
-                      overwrite: true,
-                    },
-                  );
                 }
               },
             },
@@ -75,20 +62,25 @@ export function usePortfolioRail(clientCount) {
             sectionRef.current,
           );
 
-          gsap.set(cards, { autoAlpha: 0.75, y: 20, scale: 0.985 });
-          ScrollTrigger.batch(cards, {
-            start: "top 88%",
-            once: true,
-            onEnter: (batch) =>
-              gsap.to(batch, {
+          cards.forEach((card, index) => {
+            gsap.fromTo(
+              card,
+              { autoAlpha: 0.9, y: 18, scale: 0.985 },
+              {
                 autoAlpha: 1,
                 y: 0,
                 scale: 1,
-                duration: 0.4,
-                ease: "power2.out",
-                stagger: 0.05,
-                overwrite: true,
-              }),
+                ease: "none",
+                scrollTrigger: {
+                  id: `portfolio-mobile-card-${index}`,
+                  trigger: card,
+                  start: "top 92%",
+                  end: "center 58%",
+                  scrub: 0.6,
+                  invalidateOnRefresh: true,
+                },
+              },
+            );
           });
         },
       );
