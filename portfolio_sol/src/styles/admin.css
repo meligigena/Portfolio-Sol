@@ -7,8 +7,9 @@
 .admin-editor,
 .admin-success {
   --admin-inline-padding: clamp(1.5rem, 5vw, 3rem);
+  --admin-page-padding: clamp(1rem, 4vw, 4rem);
   min-height: 100svh;
-  padding: clamp(1rem, 4vw, 4rem);
+  padding: var(--admin-page-padding);
   background: var(--color-paper);
   color: var(--color-ink);
   font-family: var(--font-profile);
@@ -275,6 +276,9 @@
 .admin-editor {
   max-width: 92rem;
   margin: 0 auto;
+  padding-bottom: calc(
+    var(--admin-page-padding) + 5rem + env(safe-area-inset-bottom)
+  );
 }
 
 .admin-editor__section {
@@ -488,14 +492,19 @@
 }
 
 .admin-editor__actions {
-  position: sticky;
-  top: 0;
-  z-index: 6;
+  position: fixed;
+  right: 50%;
+  bottom: 0;
+  z-index: 10;
   display: flex;
   gap: 0.75rem;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid currentColor;
+  box-sizing: border-box;
+  width: calc(100% - (2 * var(--admin-page-padding)));
+  max-width: calc(92rem - (2 * var(--admin-page-padding)));
+  padding: 0.75rem 0 calc(0.75rem + env(safe-area-inset-bottom));
+  border-top: 1px solid currentColor;
   background: var(--color-paper);
+  transform: translateX(50%);
 }
 
 .admin-editor__actions > button {
@@ -591,5 +600,6 @@ button:disabled {
   .admin-editor__actions > button {
     min-height: 3rem;
     padding-inline: 0.5rem;
+    overflow-wrap: anywhere;
   }
 }

@@ -269,15 +269,27 @@ describe("private portfolio admin", () => {
     expect(await screen.findByRole("button", { name: /Modificar cliente/i })).toBeInTheDocument();
   });
 
-  it("makes the shared form actions sticky without overlaying the document flow", () => {
+  it("pins the shared form actions to the bottom without covering form content", () => {
     const styles = readFileSync("src/styles/admin.css", "utf8");
     const actionsRule =
       styles.match(/\.admin-editor__actions\s*\{[^}]+}/)?.[0] ?? "";
+    const editorSpacingRule =
+      styles.match(/\.admin-editor\s*\{[^}]*padding-bottom:[^}]+}/)?.[0] ?? "";
+    const actionButtonRule =
+      styles.match(/\.admin-editor__actions > button\s*\{[^}]+}/)?.[0] ?? "";
+    const mobileStyles = styles.match(/@media \(max-width: 48rem\)[\s\S]+$/)?.[0] ?? "";
 
-    expect(actionsRule).toContain("position: sticky");
-    expect(actionsRule).toContain("top: 0");
+    expect(actionsRule).toContain("position: fixed");
+    expect(actionsRule).toContain("bottom: 0");
+    expect(actionsRule).not.toContain("top: 0");
     expect(actionsRule).toContain("display: flex");
     expect(actionsRule).toContain("background: var(--color-paper)");
+    expect(actionsRule).toContain("max-width: calc(92rem");
+    expect(editorSpacingRule).toContain("env(safe-area-inset-bottom)");
+    expect(actionButtonRule).toContain("flex: 1 1 0");
+    expect(actionButtonRule).toContain("min-width: 0");
+    expect(mobileStyles).toContain("min-height: 3rem");
+    expect(mobileStyles).toContain("overflow-wrap: anywhere");
   });
 
   it("keeps the structural About subtitle out of the editor and saves variable content once", async () => {
