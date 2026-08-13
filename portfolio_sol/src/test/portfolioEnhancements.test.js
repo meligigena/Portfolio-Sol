@@ -33,7 +33,7 @@ describe("portfolio media and motion enhancements", () => {
       /@media \(max-width: 40rem\)\s*{[\s\S]+?\.portfolio-rail__header h2\s*{[^}]+}/,
     )?.[0] ?? "";
 
-    expect(mobile).toContain("line-height: 0.88");
+    expect(mobile).toContain("line-height: 1.1");
   });
 
   it("keeps desktop rail motion unchanged and uses scrubbed card motion only on mobile", () => {
