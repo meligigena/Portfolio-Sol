@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { AdminPage } from "../admin/AdminPage";
@@ -290,6 +290,34 @@ describe("private portfolio admin", () => {
     expect(actionButtonRule).toContain("min-width: 0");
     expect(mobileStyles).toContain("min-height: 3rem");
     expect(mobileStyles).toContain("overflow-wrap: anywhere");
+  });
+
+  it("limits the shared form action colors to precise-pointer hover", () => {
+    const styles = readFileSync("src/styles/admin.css", "utf8");
+    const actionButtonRule =
+      styles.match(/\.admin-editor__actions > button\s*\{[^}]+}/)?.[0] ?? "";
+    const hoverRule =
+      styles.match(
+        /@media \(hover: hover\) and \(pointer: fine\)[\s\S]*?(?=@media \(max-width: 48rem\))/,
+      )?.[0] ?? "";
+    const cancelHoverRule =
+      hoverRule.match(
+        /\.admin-editor__actions > button:not\(\.admin-confirm\):not\(:disabled\):hover\s*\{[^}]+}/,
+      )?.[0] ?? "";
+
+    expect(actionButtonRule).toContain("background-color 0.2s ease");
+    expect(actionButtonRule).toContain("color 0.2s ease");
+    expect(actionButtonRule).toContain("border-color 0.2s ease");
+    expect(hoverRule).toContain(
+      ".admin-editor__actions > button:not(.admin-confirm):not(:disabled):hover",
+    );
+    expect(hoverRule).toContain(
+      ".admin-editor__actions > .admin-confirm:not(:disabled):hover",
+    );
+    expect(cancelHoverRule).toContain("border-color: #c62828");
+    expect(cancelHoverRule).toContain("background: #c62828");
+    expect(cancelHoverRule).not.toContain("var(--color-wine)");
+    expect(hoverRule).toContain("background: #277a4a");
   });
 
   it("keeps the structural About subtitle out of the editor and saves variable content once", async () => {
@@ -752,7 +780,7 @@ describe("private portfolio admin", () => {
     expect(screen.getAllByText("one.jpg")).toHaveLength(1);
   });
 
-  it("shows Rambla companion preview and its persisted audio setting", async () => {
+  it("shows one Rambla Video Story preview without an add-another action", async () => {
     const user = { id: "admin-user" };
     const rambla = {
       id: "rambla-id",
@@ -792,8 +820,14 @@ describe("private portfolio admin", () => {
     fireEvent.click(await screen.findByRole("button", { name: /Modificar cliente/i }));
     fireEvent.click(await screen.findByRole("button", { name: /Rambla/ }));
 
-    expect(screen.getByRole("heading", { name: "Video companion de Stories" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Video companion de Rambla")).toBeInTheDocument();
-    expect(screen.getByLabelText("Permitir sonido")).not.toBeChecked();
+    const videoStory = screen
+      .getByRole("heading", { name: "Video Story" })
+      .closest(".admin-media-group");
+    const videoStoryUi = within(videoStory);
+    expect(videoStoryUi.getAllByLabelText("Video companion de Rambla")).toHaveLength(1);
+    expect(videoStoryUi.getByRole("button", { name: "Reemplazar" })).toBeInTheDocument();
+    expect(videoStoryUi.queryByRole("button", { name: "Seleccionar archivos" })).not.toBeInTheDocument();
+    expect(videoStoryUi.queryByRole("button", { name: "Seleccionar archivo" })).not.toBeInTheDocument();
+    expect(videoStoryUi.getByLabelText("Permitir sonido")).not.toBeChecked();
   });
 });

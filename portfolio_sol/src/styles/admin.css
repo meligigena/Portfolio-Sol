@@ -591,6 +591,10 @@
   flex: 1 1 0;
   min-width: 0;
   min-height: 3.5rem;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .admin-confirm {
@@ -622,6 +626,20 @@ button:disabled {
 .admin-danger {
   background: #9e1520 !important;
   color: #fff !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .admin-editor__actions > button:not(.admin-confirm):not(:disabled):hover {
+    border-color: #c62828;
+    background: #c62828;
+    color: #fff;
+  }
+
+  .admin-editor__actions > .admin-confirm:not(:disabled):hover {
+    border-color: #277a4a;
+    background: #277a4a;
+    color: #fff;
+  }
 }
 
 @media (max-width: 48rem) {

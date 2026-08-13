@@ -324,6 +324,7 @@ describe("admin destructive operations", () => {
     const storySection = rpc.mock.calls[0][1].p_payload.sections.find(
       (section) => section.section_type === "storySequence",
     );
+    expect(storySection.groups[0].items).toHaveLength(1);
     expect(storySection.groups[0].items[0].audio_enabled).toBe(true);
   });
 

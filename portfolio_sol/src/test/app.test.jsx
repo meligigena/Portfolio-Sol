@@ -429,6 +429,26 @@ describe("portfolio routes", () => {
     expect(screen.queryByText("EMAIL")).not.toBeInTheDocument();
   });
 
+  it("exposes a scoped, motion-safe sequence for the Contact section", () => {
+    renderRoute();
+
+    const section = document.getElementById("contacto");
+    const source = readFileSync("src/animations/useSectionReveal.js", "utf8");
+
+    expect(section.querySelector("[data-contact-title]")).toBeInTheDocument();
+    expect(section.querySelector("[data-contact-divider]")).toBeInTheDocument();
+    expect(section.querySelector("[data-contact-intro]")).toBeInTheDocument();
+    expect(section.querySelectorAll("[data-contact-action]")).toHaveLength(2);
+    expect(source).toContain("useContactReveal");
+    expect(source).toContain("gsap.matchMedia()");
+    expect(source).toContain("prefers-reduced-motion: reduce");
+    expect(source).toContain("scrollTrigger");
+    expect(source).toContain("ResizeObserver");
+    expect(source).toContain("ScrollTrigger.refresh()");
+    expect(source).toContain("section.getBoundingClientRect().top + window.scrollY");
+    expect(source).toContain("media.revert()");
+  });
+
   it("renders keyboard-accessible web contact links", () => {
     renderRoute();
 

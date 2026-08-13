@@ -1,9 +1,9 @@
-import { useSectionReveal } from "../animations/useSectionReveal";
+import { useContactReveal } from "../animations/useSectionReveal";
 import { NetworkTitle } from "../components/typography/NetworkTitle";
 import { contact } from "../data/contact";
 
 export function Contact() {
-  const sectionRef = useSectionReveal();
+  const sectionRef = useContactReveal();
 
   return (
     <section
@@ -12,15 +12,21 @@ export function Contact() {
       id="contacto"
       aria-labelledby="contact-title"
     >
-      <header className="contact__header" data-reveal>
-        <span className="contact__divider" data-section-divider aria-hidden="true" />
-        <NetworkTitle id="contact-title" text="Contacto" />
-        <p>DISEÑO GRÁFICO / EDICIÓN DE VIDEO</p>
+      <header className="contact__header">
+        <span
+          className="contact__divider"
+          data-contact-divider
+          data-section-divider
+          aria-hidden="true"
+        />
+        <NetworkTitle data-contact-title id="contact-title" text="Contacto" />
+        <p data-contact-intro>DISEÑO GRÁFICO / EDICIÓN DE VIDEO</p>
       </header>
 
-      <div className="contact__links" data-reveal>
+      <div className="contact__links">
         <a
           className="contact__email"
+          data-contact-action
           href={contact.emailHref}
           target="_blank"
           rel="noopener noreferrer"
@@ -56,6 +62,7 @@ export function Contact() {
 
         <a
           className="contact__whatsapp"
+          data-contact-action
           href={contact.whatsappHref}
           target="_blank"
           rel="noopener noreferrer"

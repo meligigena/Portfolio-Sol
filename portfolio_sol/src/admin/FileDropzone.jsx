@@ -58,6 +58,7 @@ export function FileDropzone({
   allowedMimeTypes,
   editableSingle = false,
   items,
+  maxItems,
   mediaKind,
   multiple = true,
   onChange,
@@ -67,10 +68,13 @@ export function FileDropzone({
   const inputRef = useRef(null);
   const [error, setError] = useState("");
   const [validating, setValidating] = useState(false);
-  const hasCurrentItem = items.length > 0;
-  const usesEditableSingleActions = editableSingle || (!multiple && mediaKind === "logo");
+  const effectiveMaxItems = maxItems ?? (multiple ? Infinity : 1);
+  const acceptsMultiple = multiple && effectiveMaxItems !== 1;
+  const hasCurrentItem = items.some((item) => !item.removed);
+  const usesEditableSingleActions = editableSingle || effectiveMaxItems === 1;
 
   const addPendingFiles = (files, details = []) => {
+    const currentItem = items.find((item) => !item.removed) ?? items[0];
     const pending = files.map((file, index) =>
       createPendingItem(file, mediaKind, {
         ...pendingItemMetadata,
@@ -78,14 +82,32 @@ export function FileDropzone({
         height: details[index]?.height,
       }),
     );
-    if (!multiple && items[0]?.existing && pending[0]) {
-      pending[0].replacedStoragePath = items[0].storagePath;
+    if (usesEditableSingleActions && currentItem && pending[0]) {
+      pending[0].audioEnabled = currentItem.audioEnabled !== false;
+      pending[0].replacedStoragePath = currentItem.existing
+        ? currentItem.storagePath
+        : currentItem.replacedStoragePath;
     }
-    onChange(multiple ? [...items, ...pending] : pending.slice(0, 1));
+    onChange(
+      usesEditableSingleActions
+        ? pending.slice(0, 1)
+        : [...items, ...pending],
+    );
   };
 
   const addFiles = (fileList) => {
     const files = [...fileList];
+    if (files.length === 0) return;
+    const activeItemCount = items.filter((item) => !item.removed).length;
+    const availableSlots = usesEditableSingleActions
+      ? effectiveMaxItems
+      : effectiveMaxItems - activeItemCount;
+    if (files.length > availableSlots) {
+      setError(
+        `Podés seleccionar como máximo ${availableSlots} ${availableSlots === 1 ? "archivo" : "archivos"}.`,
+      );
+      return;
+    }
     const errors = validateFiles(files, allowedMimeTypes);
     if (errors.length > 0) {
       setError(errors[0].message);
@@ -151,7 +173,7 @@ export function FileDropzone({
         <input
           accept={accept}
           hidden
-          multiple={multiple}
+          multiple={acceptsMultiple}
           onChange={(event) => {
             addFiles(event.target.files);
             event.target.value = "";
@@ -172,7 +194,7 @@ export function FileDropzone({
             ? "Verificando video…"
             : usesEditableSingleActions && hasCurrentItem
               ? "Reemplazar"
-              : multiple
+              : acceptsMultiple
                 ? "Seleccionar archivos"
                 : "Seleccionar archivo"}
         </button>

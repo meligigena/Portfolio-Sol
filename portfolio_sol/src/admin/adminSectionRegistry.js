@@ -15,6 +15,16 @@ export const ADMIN_SECTION_DEFINITIONS = [
     allowedMimeTypes: IMAGE_MIME_TYPES,
     contexts: ["root", "edition"],
     initialConfig: { presentation: "singlePhone" },
+    companion: {
+      groupKind: "story_companion",
+      label: "Video Story",
+      mediaKind: "video",
+      maxItems: 1,
+      accept: VIDEO_ACCEPT,
+      allowedMimeTypes: VIDEO_MIME_TYPES,
+      pendingItemMetadata: { presentation: "phone" },
+      showAudio: true,
+    },
   },
   {
     key: "posts",

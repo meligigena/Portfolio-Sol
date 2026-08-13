@@ -624,6 +624,7 @@ describe("admin CRUD payloads", () => {
       group_kind: "story_companion",
       items: [expect.objectContaining({ audio_enabled: true })],
     });
+    expect(storySection.groups[0].items).toHaveLength(1);
   });
 
   it("repairs known UTF-8 mojibake without changing correct Spanish text", () => {

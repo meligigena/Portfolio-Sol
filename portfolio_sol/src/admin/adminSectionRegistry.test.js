@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   ADMIN_SECTION_DEFINITIONS,
   getAvailableSectionDefinitions,
+  getSectionDefinitionByType,
 } from "./adminSectionRegistry";
 
 describe("Admin section registry", () => {
@@ -53,5 +54,14 @@ describe("Admin section registry", () => {
 
     expect(firstEdition.map((definition) => definition.type)).not.toContain("postGrid");
     expect(secondEdition.map((definition) => definition.type)).toContain("postGrid");
+  });
+
+  it("defines the story companion as a single-item Admin media group", () => {
+    expect(getSectionDefinitionByType("storySequence").companion).toMatchObject({
+      groupKind: "story_companion",
+      label: "Video Story",
+      maxItems: 1,
+      mediaKind: "video",
+    });
   });
 });

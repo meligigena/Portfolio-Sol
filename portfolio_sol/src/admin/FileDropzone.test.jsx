@@ -8,18 +8,36 @@ import { FileDropzone } from "./FileDropzone";
 
 const IMAGE_TYPES = ["image/jpeg", "image/png"];
 
-function DropzoneHarness({ initialItems = [], mediaKind = "post", multiple = true }) {
+function DropzoneHarness({
+  initialItems = [],
+  maxItems,
+  mediaKind = "post",
+  multiple = true,
+  onItemsChange = () => {},
+  showAudio = false,
+}) {
   const [items, setItems] = useState(initialItems);
+  const updateItems = (nextItems) => {
+    setItems(nextItems);
+    onItemsChange(nextItems);
+  };
 
   return (
-    <FileDropzone
-      accept=".jpg,.jpeg,.png"
-      allowedMimeTypes={IMAGE_TYPES}
-      items={items}
-      mediaKind={mediaKind}
-      multiple={multiple}
-      onChange={setItems}
-    />
+    <>
+      <FileDropzone
+        accept={mediaKind === "video" ? ".mp4" : ".jpg,.jpeg,.png"}
+        allowedMimeTypes={mediaKind === "video" ? ["video/mp4"] : IMAGE_TYPES}
+        items={items}
+        maxItems={maxItems}
+        mediaKind={mediaKind}
+        multiple={multiple}
+        onChange={updateItems}
+        showAudio={showAudio}
+      />
+      <output aria-label="Cantidad activa">
+        {items.filter((item) => !item.removed).length}
+      </output>
+    </>
   );
 }
 
@@ -206,6 +224,106 @@ describe("FileDropzone previews", () => {
       portfolioMediaUrl("rambla/stories/companion.mp4"),
     );
     expect(screen.getByLabelText("Permitir sonido")).not.toBeChecked();
+  });
+
+  it("replaces the current single video in the draft and preserves audio", async () => {
+    const onItemsChange = vi.fn();
+    const { container } = render(
+      <DropzoneHarness
+        initialItems={[
+          {
+            id: "companion",
+            existing: true,
+            removed: false,
+            storagePath: "rambla/stories/companion.mp4",
+            name: "companion.mp4",
+            type: "video",
+            audioEnabled: false,
+          },
+        ]}
+        maxItems={1}
+        mediaKind="video"
+        onItemsChange={onItemsChange}
+        showAudio
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Reemplazar" })).toBeInTheDocument();
+    fireEvent.change(container.querySelector('input[type="file"]'), {
+      target: { files: [mp4Video("avc1")] },
+    });
+
+    expect(await screen.findByLabelText("Preview de nuevo.mp4")).toBeInTheDocument();
+    expect(screen.queryByText("companion.mp4")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Cantidad activa")).toHaveTextContent("1");
+    expect(screen.getByLabelText("Permitir sonido")).not.toBeChecked();
+    expect(onItemsChange).toHaveBeenLastCalledWith([
+      expect.objectContaining({
+        audioEnabled: false,
+        existing: false,
+        replacedStoragePath: "rambla/stories/companion.mp4",
+      }),
+    ]);
+  });
+
+  it("marks the persisted single video for removal and exposes the empty slot", () => {
+    const onItemsChange = vi.fn();
+    render(
+      <DropzoneHarness
+        initialItems={[
+          {
+            id: "companion",
+            existing: true,
+            removed: false,
+            storagePath: "rambla/stories/companion.mp4",
+            name: "companion.mp4",
+            type: "video",
+            audioEnabled: false,
+          },
+        ]}
+        maxItems={1}
+        mediaKind="video"
+        onItemsChange={onItemsChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Eliminar" }));
+
+    expect(screen.getByLabelText("Cantidad activa")).toHaveTextContent("0");
+    expect(screen.getByRole("button", { name: "Seleccionar archivo" })).toBeInTheDocument();
+    expect(onItemsChange).toHaveBeenLastCalledWith([
+      expect.objectContaining({ existing: true, removed: true }),
+    ]);
+  });
+
+  it("fills an empty single-video slot with exactly one compatible file", async () => {
+    const { container } = render(
+      <DropzoneHarness maxItems={1} mediaKind="video" />,
+    );
+
+    fireEvent.change(container.querySelector('input[type="file"]'), {
+      target: { files: [mp4Video("avc1")] },
+    });
+
+    expect(await screen.findByLabelText("Preview de nuevo.mp4")).toBeInTheDocument();
+    expect(screen.getByLabelText("Cantidad activa")).toHaveTextContent("1");
+  });
+
+  it("rejects multiple files when the configured maximum is one", () => {
+    const { container } = render(
+      <DropzoneHarness maxItems={1} mediaKind="video" />,
+    );
+    const input = container.querySelector('input[type="file"]');
+
+    expect(input).not.toHaveAttribute("multiple");
+    fireEvent.change(input, {
+      target: { files: [mp4Video("avc1"), mp4Video("avc1")] },
+    });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Podés seleccionar como máximo 1 archivo.",
+    );
+    expect(screen.getByLabelText("Cantidad activa")).toHaveTextContent("0");
   });
 
   it("revokes a local preview when its pending file is removed", () => {

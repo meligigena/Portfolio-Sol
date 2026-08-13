@@ -283,6 +283,7 @@ function DraftBannerUploads({ section, onChange }) {
 
 function DraftSectionEditor({ index, onChange, onMove, onRemove, section, total }) {
   const definition = getSectionDefinitionByType(section.type);
+  const companionDefinition = definition?.companion;
 
   return (
     <Section
@@ -325,22 +326,23 @@ function DraftSectionEditor({ index, onChange, onMove, onRemove, section, total 
         />
       )}
       {section.type === "storySequence" &&
+        companionDefinition &&
         (section.companionVideo || section.presentation === "dualPhoneVideo") && (
           <div className="admin-media-group">
             <div className="admin-media-group__header">
-              <h3>Video companion de Stories</h3>
+              <h3>{companionDefinition.label}</h3>
             </div>
             <FileDropzone
-              accept={VIDEO_ACCEPT}
-              allowedMimeTypes={VIDEO_MIME_TYPES}
+              accept={companionDefinition.accept}
+              allowedMimeTypes={companionDefinition.allowedMimeTypes}
               items={section.companionVideo ? [section.companionVideo] : []}
-              mediaKind="video"
-              multiple={false}
+              maxItems={companionDefinition.maxItems}
+              mediaKind={companionDefinition.mediaKind}
               onChange={(items) =>
                 onChange({ ...section, companionVideo: items[0] ?? null })
               }
-              pendingItemMetadata={{ presentation: "phone" }}
-              showAudio
+              pendingItemMetadata={companionDefinition.pendingItemMetadata}
+              showAudio={companionDefinition.showAudio}
             />
           </div>
         )}

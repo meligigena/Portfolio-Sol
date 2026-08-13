@@ -600,3 +600,12 @@ Completar la activación de clientes desde Database y retirar el fallback tempor
 - [ ] Aplicar la nueva migration al proyecto remoto mediante SQL Editor autenticado o Management API/CLI autorizada.
 - [ ] Ejecutar Playwright CLI en desktop, laptop, tablet, mobile y navegación SPA. Requiere autorizar la descarga temporal de `@playwright/cli` en esta sesión.
 - [ ] Retirar las dos copias locales sólo después de los dos puntos anteriores y una verificación final de Storage.
+
+## 23. Iteración visual — Contacto y acciones del Admin
+
+- [x] Separar la entrada de Contacto del reveal genérico sin modificar otras secciones.
+- [x] Secuenciar título, divisor, texto introductorio y acciones con GSAP/ScrollTrigger responsive.
+- [x] Respetar reduced motion y cleanup al desmontar o cambiar media queries.
+- [x] Aplicar hover rojo/verde sólo a la barra compartida del Admin y a punteros precisos.
+- [x] Refrescar el trigger de Contacto sólo cuando su posición cambie por contenido superior asíncrono.
+- [x] Diferenciar Cancelar con rojo `#c62828`, sin reutilizar el bordó de identidad.
