@@ -1,12 +1,31 @@
 import { useRef } from "react";
 import { gsap, ScrollTrigger, useGSAP } from "./gsap";
 
+export function scrollCaseStudyToTop() {
+  const scrollOptions = { top: 0, left: 0, behavior: "auto" };
+
+  if (!window.matchMedia("(max-width: 48rem)").matches) {
+    window.scrollTo(scrollOptions);
+    return;
+  }
+
+  const root = document.documentElement;
+  const previousScrollBehavior = root.style.scrollBehavior;
+  root.style.scrollBehavior = "auto";
+
+  try {
+    window.scrollTo(scrollOptions);
+  } finally {
+    root.style.scrollBehavior = previousScrollBehavior;
+  }
+}
+
 export function useCaseStudyMotion(clientSlug) {
   const pageRef = useRef(null);
 
   useGSAP(
     (context, contextSafe) => {
-      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      scrollCaseStudyToTop();
 
       const media = gsap.matchMedia();
 
@@ -101,9 +120,9 @@ export function useCaseStudyMotion(clientSlug) {
       );
 
       const refresh = contextSafe(() => {
-        window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+        scrollCaseStudyToTop();
         ScrollTrigger.refresh();
-        window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+        scrollCaseStudyToTop();
       });
       let secondRefreshFrame = null;
       const firstRefreshFrame = requestAnimationFrame(() => {
