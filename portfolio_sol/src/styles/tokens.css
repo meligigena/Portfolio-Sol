@@ -6,6 +6,17 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: "Network Free Mobile";
+  src: url("../../fonts/NetworkFreeVersion.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  ascent-override: 95.6%;
+  descent-override: 56.3%;
+  line-gap-override: 0%;
+}
+
 :root {
   --color-ink: #080808;
   --color-wine: #781a34;

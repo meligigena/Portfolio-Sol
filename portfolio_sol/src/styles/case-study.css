@@ -807,14 +807,21 @@
   .case-study__intro h1 {
     margin-top: 1.5rem;
     overflow: visible;
+    font-family: "Network Free Mobile", var(--font-display);
     font-size: clamp(3.25rem, 12.5vw, 4.75rem);
+    line-height: 1.52;
     transform: none !important;
   }
 
   .case-study__intro h1:not(.case-study__intro-title--multiline) {
-    margin-top: calc(1.5rem - 0.135em);
-    margin-bottom: -0.135em;
-    line-height: 1.05;
+    margin-top: calc(1.5rem - 0.37em);
+    margin-bottom: -0.37em;
+  }
+
+  .case-study__intro h1.case-study__intro-title--multiline {
+    margin-top: calc(1.5rem - 0.34em);
+    margin-bottom: -0.34em;
+    line-height: 1.52;
   }
 
   .case-study__editions {

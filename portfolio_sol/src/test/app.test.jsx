@@ -80,6 +80,32 @@ function collectVideoSources(value) {
   return [...ownSource, ...nestedSources];
 }
 
+function readSfntVerticalMetrics(path) {
+  const font = readFileSync(path);
+  const tableCount = font.readUInt16BE(4);
+  const tables = new Map();
+
+  for (let index = 0; index < tableCount; index += 1) {
+    const entryOffset = 12 + index * 16;
+    tables.set(
+      font.toString("ascii", entryOffset, entryOffset + 4),
+      font.readUInt32BE(entryOffset + 8),
+    );
+  }
+
+  const headOffset = tables.get("head");
+  const os2Offset = tables.get("OS/2");
+
+  return {
+    unitsPerEm: font.readUInt16BE(headOffset + 18),
+    glyphYMin: font.readInt16BE(headOffset + 38),
+    glyphYMax: font.readInt16BE(headOffset + 42),
+    typoAscent: font.readInt16BE(os2Offset + 68),
+    winAscent: font.readUInt16BE(os2Offset + 74),
+    winDescent: font.readUInt16BE(os2Offset + 76),
+  };
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
   delete document.fonts;
@@ -1051,8 +1077,10 @@ describe("portfolio routes", () => {
     expect(styles).toContain("font-size: clamp(2.75rem, 11vw, 5rem)");
   });
 
-  it("keeps mobile case-study title glyphs outside transformed clipping layers", () => {
+  it("sizes the mobile title line box from the full Network Free font metrics", () => {
     const styles = readFileSync("src/styles/case-study.css", "utf8");
+    const tokens = readFileSync("src/styles/tokens.css", "utf8");
+    const metrics = readSfntVerticalMetrics("fonts/NetworkFreeVersion.ttf");
     const mobileStyles = styles.slice(styles.indexOf("@media (max-width: 48rem)"));
     const mobileTitleRule =
       mobileStyles.match(/\.case-study__intro h1\s*\{[^}]+}/)?.[0] ?? "";
@@ -1060,10 +1088,34 @@ describe("portfolio routes", () => {
       mobileStyles.match(
         /\.case-study__intro h1:not\(\.case-study__intro-title--multiline\)\s*\{[^}]+}/,
       )?.[0] ?? "";
+    const mobileMultilineRule =
+      mobileStyles.match(
+        /\.case-study__intro h1\.case-study__intro-title--multiline\s*\{[^}]+}/,
+      )?.[0] ?? "";
+    const mobileLineHeight = Number(
+      mobileTitleRule.match(/line-height:\s*([\d.]+)/)?.[1],
+    );
+    const minimumFullMetricsLineHeight =
+      (metrics.winAscent + metrics.winDescent) / metrics.unitsPerEm;
+    const mobileFontFace =
+      tokens.match(
+        /@font-face\s*\{[^}]*font-family:\s*"Network Free Mobile"[^}]*}/,
+      )?.[0] ?? "";
 
+    expect(metrics.typoAscent).toBeLessThan(metrics.glyphYMax);
+    expect(minimumFullMetricsLineHeight).toBe(1.519);
+    expect(mobileLineHeight).toBeGreaterThanOrEqual(minimumFullMetricsLineHeight);
+    expect(mobileFontFace).toContain("ascent-override: 95.6%");
+    expect(mobileFontFace).toContain("descent-override: 56.3%");
+    expect(mobileFontFace).toContain("line-gap-override: 0%");
     expect(mobileTitleRule).toContain("overflow: visible");
+    expect(mobileTitleRule).toContain(
+      'font-family: "Network Free Mobile", var(--font-display)',
+    );
     expect(mobileTitleRule).toContain("transform: none !important");
-    expect(mobileSingleLineRule).toContain("line-height: 1.05");
+    expect(mobileSingleLineRule).toContain("margin-top: calc(1.5rem - 0.37em)");
+    expect(mobileSingleLineRule).toContain("margin-bottom: -0.37em");
+    expect(mobileMultilineRule).toContain("line-height: 1.52");
     expect(mobileTitleRule).not.toMatch(/padding(?:-block|-top|-bottom)?:/);
     expect(mobileSingleLineRule).not.toMatch(/padding(?:-block|-top|-bottom)?:/);
   });
