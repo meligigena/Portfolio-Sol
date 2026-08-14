@@ -806,7 +806,15 @@
 
   .case-study__intro h1 {
     margin-top: 1.5rem;
+    overflow: visible;
     font-size: clamp(3.25rem, 12.5vw, 4.75rem);
+    transform: none !important;
+  }
+
+  .case-study__intro h1:not(.case-study__intro-title--multiline) {
+    margin-top: calc(1.5rem - 0.135em);
+    margin-bottom: -0.135em;
+    line-height: 1.05;
   }
 
   .case-study__editions {

@@ -1,5 +1,25 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { scrollCaseStudyToTop } from "./useCaseStudyMotion";
+import {
+  MOBILE_CASE_STUDY_TITLE_TWEEN,
+  scrollCaseStudyToTop,
+} from "./useCaseStudyMotion";
+
+describe("case study mobile title animation", () => {
+  it("reveals the title without transforming the text layer", () => {
+    expect(MOBILE_CASE_STUDY_TITLE_TWEEN).toMatchObject({
+      autoAlpha: 0,
+      duration: 0.75,
+      ease: "power3.out",
+    });
+    expect(MOBILE_CASE_STUDY_TITLE_TWEEN).not.toHaveProperty("x");
+    expect(MOBILE_CASE_STUDY_TITLE_TWEEN).not.toHaveProperty("y");
+    expect(MOBILE_CASE_STUDY_TITLE_TWEEN).not.toHaveProperty("scale");
+    expect(MOBILE_CASE_STUDY_TITLE_TWEEN).not.toHaveProperty("transform");
+    expect(MOBILE_CASE_STUDY_TITLE_TWEEN.clearProps.split(",")).toContain(
+      "transform",
+    );
+  });
+});
 
 describe("case study mobile scroll reset", () => {
   const originalMatchMedia = window.matchMedia;

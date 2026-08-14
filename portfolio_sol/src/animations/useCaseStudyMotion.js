@@ -1,6 +1,13 @@
 import { useRef } from "react";
 import { gsap, ScrollTrigger, useGSAP } from "./gsap";
 
+export const MOBILE_CASE_STUDY_TITLE_TWEEN = {
+  autoAlpha: 0,
+  duration: 0.75,
+  ease: "power3.out",
+  clearProps: "opacity,visibility,transform",
+};
+
 export function scrollCaseStudyToTop() {
   const scrollOptions = { top: 0, left: 0, behavior: "auto" };
 
@@ -29,15 +36,39 @@ export function useCaseStudyMotion(clientSlug) {
 
       const media = gsap.matchMedia();
 
-      media.add("(prefers-reduced-motion: no-preference)", () => {
-        gsap.from(".case-study__intro > *", {
-          autoAlpha: 0,
-          y: 28,
-          duration: 0.75,
-          stagger: 0.08,
-          ease: "power3.out",
-        });
+      media.add(
+        "(min-width: 48.001rem) and (prefers-reduced-motion: no-preference)",
+        () => {
+          gsap.from(".case-study__intro > *", {
+            autoAlpha: 0,
+            y: 28,
+            duration: 0.75,
+            stagger: 0.08,
+            ease: "power3.out",
+          });
+        },
+      );
 
+      media.add(
+        "(max-width: 48rem) and (prefers-reduced-motion: no-preference)",
+        () => {
+          const title = pageRef.current?.querySelector(".case-study__intro h1");
+
+          if (title) {
+            gsap.set(title, { clearProps: "transform" });
+            gsap.from(title, MOBILE_CASE_STUDY_TITLE_TWEEN);
+          }
+
+          gsap.from(".case-study__intro-meta", {
+            autoAlpha: 0,
+            y: 28,
+            duration: 0.75,
+            ease: "power3.out",
+          });
+        },
+      );
+
+      media.add("(prefers-reduced-motion: no-preference)", () => {
         gsap.utils.toArray('.project-media:not([data-media-kind="story"]):not([data-media-kind="post"])').forEach((mediaItem) => {
           gsap.from(mediaItem, {
             autoAlpha: 0,
