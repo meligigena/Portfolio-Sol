@@ -1051,6 +1051,18 @@ describe("portfolio routes", () => {
     expect(styles).toContain("font-size: clamp(2.75rem, 11vw, 5rem)");
   });
 
+  it("reserves mobile paint bounds for case-study glyph overflow without shifting layout", () => {
+    const styles = readFileSync("src/styles/case-study.css", "utf8");
+    const mobileTitleRule =
+      styles.match(
+        /@media \(max-width: 48rem\) \{[\s\S]*?\.case-study__intro h1\s*\{([^}]*)\}/,
+      )?.[1] ?? "";
+
+    expect(mobileTitleRule).toContain("padding-block: 0.4em");
+    expect(mobileTitleRule).toContain("margin-top: calc(1.5rem - 0.4em)");
+    expect(mobileTitleRule).toContain("margin-bottom: -0.4em");
+  });
+
   it("gives the long Sistemas Moviles Network title safe character and line spacing", async () => {
     const styles = readFileSync("src/styles/case-study.css", "utf8");
     const longTitleRule =
