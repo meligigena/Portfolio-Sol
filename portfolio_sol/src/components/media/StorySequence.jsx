@@ -5,16 +5,20 @@ import { SoundToggleButton } from "./SoundToggleButton";
 import { useVideoViewportVisibility } from "./useVideoViewportVisibility";
 import { claimVideoSound, VIDEO_SOUND_OWNER_EVENT } from "./videoSound";
 
-export function StorySequence({ companionVideo = null, presentation = "singlePhone", projects }) {
+export function StorySequence({ companionVideo = null, projects = [], videoStory = null }) {
   const sequenceRef = useRef(null);
   const ownerId = useId();
   const [soundEnabled, setSoundEnabled] = useState(false);
-  const isDualPhone = presentation === "dualPhoneVideo" && Boolean(companionVideo);
-  const audioAllowed = companionVideo?.audioEnabled !== false;
+  const resolvedVideoStory = videoStory ?? companionVideo;
+  const storyProjects = projects.filter((project) => Boolean(project?.src));
+  const hasStories = storyProjects.length > 0;
+  const hasVideoStory = Boolean(resolvedVideoStory?.src);
+  const isDualPhone = hasStories && hasVideoStory;
+  const audioAllowed = resolvedVideoStory?.audioEnabled !== false;
 
   useVideoViewportVisibility({
     containerRef: sequenceRef,
-    observeKey: companionVideo,
+    observeKey: resolvedVideoStory,
     onHidden: () => setSoundEnabled(false),
     onVisible: (video) => {
       video.muted = !audioAllowed || !soundEnabled;
@@ -105,16 +109,18 @@ export function StorySequence({ companionVideo = null, presentation = "singlePho
     },
   );
 
+  if (!hasStories && !hasVideoStory) return null;
+
   return (
     <div
       className="case-study__story-scroll"
-      data-story-presentation={isDualPhone ? "dualPhoneVideo" : "singlePhone"}
+      data-story-presentation={isDualPhone ? "dualPhone" : "singlePhone"}
       data-story-sequence
       ref={sequenceRef}
     >
       <div className="case-study__story-pin">
         <div className="case-study__story-composition">
-          {isDualPhone && (
+          {hasVideoStory && (
             <figure
               className="project-media project-media--story-device project-media--story-video-device"
               data-media-kind="video"
@@ -124,9 +130,9 @@ export function StorySequence({ companionVideo = null, presentation = "singlePho
               <div className="project-media__phone">
                 <div className="project-media__phone-screen">
                   <video
-                    aria-label={companionVideo.alt}
+                    aria-label={resolvedVideoStory.alt}
                     data-audio-enabled={audioAllowed}
-                    height={companionVideo.height}
+                    height={resolvedVideoStory.height}
                     loop
                     muted
                     onVolumeChange={(event) => {
@@ -136,8 +142,8 @@ export function StorySequence({ companionVideo = null, presentation = "singlePho
                     }}
                     playsInline
                     preload="none"
-                    src={portfolioMediaUrl(companionVideo.src)}
-                    width={companionVideo.width}
+                    src={portfolioMediaUrl(resolvedVideoStory.src)}
+                    width={resolvedVideoStory.width}
                   />
                   {audioAllowed && (
                     <SoundToggleButton enabled={soundEnabled} onClick={toggleSound} />
@@ -148,7 +154,7 @@ export function StorySequence({ companionVideo = null, presentation = "singlePho
               <figcaption>VIDEO</figcaption>
             </figure>
           )}
-          <figure
+          {hasStories && <figure
             className="project-media project-media--story-device"
             data-media-kind="story"
             data-story-device
@@ -157,7 +163,7 @@ export function StorySequence({ companionVideo = null, presentation = "singlePho
             <div className="project-media__phone">
               <div className="project-media__phone-screen">
                 <div className="project-media__story-track" data-story-track>
-                  {projects.map((project) => (
+                  {storyProjects.map((project) => (
                     <div
                       className="project-media__story-slide"
                       data-story-slide
@@ -188,7 +194,7 @@ export function StorySequence({ companionVideo = null, presentation = "singlePho
               <PhoneFrame />
             </div>
             <figcaption>STORY</figcaption>
-          </figure>
+          </figure>}
         </div>
       </div>
     </div>

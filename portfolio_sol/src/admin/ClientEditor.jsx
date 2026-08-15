@@ -68,7 +68,6 @@ function sectionItems(section) {
   return [
     ...(section.items ?? []),
     ...(section.groups ?? []).flatMap((group) => group.items ?? []),
-    ...(section.companionVideo ? [section.companionVideo] : []),
   ];
 }
 
@@ -116,7 +115,7 @@ function hasEditionContent(edition) {
 
 function hasRootDraftContent(draft) {
   return (
-    [draft.stories, draft.posts, draft.videos, draft.banners].some((items) =>
+    [draft.stories, draft.videoStory, draft.posts, draft.videos, draft.banners].some((items) =>
       (items ?? []).some((item) => !item.removed),
     ) ||
     [draft.carousels, draft.catalogs].some((groups) =>
@@ -140,9 +139,6 @@ function markSectionRemoved(section, removed) {
       removed,
       items: (group.items ?? []).map((item) => ({ ...item, removed })),
     })),
-    companionVideo: section.companionVideo
-      ? { ...section.companionVideo, removed }
-      : undefined,
   };
 }
 
@@ -287,7 +283,6 @@ function DraftBannerUploads({ section, onChange }) {
 
 function DraftSectionEditor({ index, onChange, onMove, onRemove, section, total }) {
   const definition = getSectionDefinitionByType(section.type);
-  const companionDefinition = definition?.companion;
 
   return (
     <Section
@@ -324,32 +319,13 @@ function DraftSectionEditor({ index, onChange, onMove, onRemove, section, total 
           accept={definition.accept}
           allowedMimeTypes={definition.allowedMimeTypes}
           items={section.items}
+          maxItems={definition.maxItems}
           mediaKind={definition.mediaKind}
           onChange={(items) => onChange({ ...section, items })}
+          pendingItemMetadata={definition.pendingItemMetadata}
           showAudio={definition.showAudio}
         />
       )}
-      {section.type === "storySequence" &&
-        companionDefinition &&
-        (section.companionVideo || section.presentation === "dualPhoneVideo") && (
-          <div className="admin-media-group">
-            <div className="admin-media-group__header">
-              <h3>{companionDefinition.label}</h3>
-            </div>
-            <FileDropzone
-              accept={companionDefinition.accept}
-              allowedMimeTypes={companionDefinition.allowedMimeTypes}
-              items={section.companionVideo ? [section.companionVideo] : []}
-              maxItems={companionDefinition.maxItems}
-              mediaKind={companionDefinition.mediaKind}
-              onChange={(items) =>
-                onChange({ ...section, companionVideo: items[0] ?? null })
-              }
-              pendingItemMetadata={companionDefinition.pendingItemMetadata}
-              showAudio={companionDefinition.showAudio}
-            />
-          </div>
-        )}
       {section.type === "banners" && (
         <DraftBannerUploads onChange={onChange} section={section} />
       )}
@@ -427,13 +403,22 @@ function EditionEditor({ edition, onEditionChange }) {
       )}
       <AddSectionControl
         context="edition"
-        onAdd={(type) =>
+        onAdd={(type) => {
+          const removedSection = edition.sections.find(
+            (section) => section.type === type && section.removed,
+          );
           onEditionChange({
             ...edition,
-            sections: [...edition.sections, createPendingEditionSection(type)],
-          })
-        }
-        presentTypes={edition.sections.map((section) => section.type)}
+            sections: removedSection
+              ? edition.sections.map((section) =>
+                  section === removedSection
+                    ? markSectionRemoved(section, false)
+                    : section,
+                )
+              : [...edition.sections, createPendingEditionSection(type)],
+          });
+        }}
+        presentTypes={activeSections.map((section) => section.type)}
       />
     </section>
   );
@@ -519,6 +504,22 @@ export function ClientEditor({ initialDraft, mode, onCancel, onSaved, service })
     });
   };
 
+  const removeRootSection = (definition) => {
+    const entries = draft[definition.draftField] ?? [];
+    const removedEntries = definition.uploader === "grouped"
+      ? entries.map((group) => ({
+          ...group,
+          removed: true,
+          items: group.items.map((item) => ({ ...item, removed: true })),
+        }))
+      : entries.map((item) => ({ ...item, removed: true }));
+    setDraft({
+      ...draft,
+      [definition.draftField]: removedEntries,
+      sectionOrder: draft.sectionOrder.filter((key) => key !== definition.key),
+    });
+  };
+
   const renderContentSection = (sectionKey, index) => {
     const definition = getSectionDefinitionByKey(sectionKey);
     const storedEntries = definition?.draftField
@@ -541,10 +542,6 @@ export function ClientEditor({ initialDraft, mode, onCancel, onSaved, service })
             definition.type === "storySequence"
               ? draft.sectionConfig.storySequence?.presentation
               : definition.initialConfig.presentation,
-          companionVideo:
-            definition.type === "storySequence"
-              ? draft.sectionConfig.storySequence?.companionVideo
-              : undefined,
         }
       : null;
     const customId = sectionKey.startsWith("custom:")
@@ -601,7 +598,6 @@ export function ClientEditor({ initialDraft, mode, onCancel, onSaved, service })
             storySequence: {
               ...(nextSection.config ?? {}),
               presentation: nextSection.presentation,
-              companionVideo: nextSection.companionVideo ?? null,
             },
           };
         }
@@ -626,7 +622,13 @@ export function ClientEditor({ initialDraft, mode, onCancel, onSaved, service })
         key={sectionKey}
         onChange={updateRootSection}
         onMove={(offset) => moveSection(index, offset)}
-        onRemove={custom ? () => removeCustomSection(custom) : null}
+        onRemove={
+          custom
+            ? () => removeCustomSection(custom)
+            : definition
+              ? () => removeRootSection(definition)
+              : null
+        }
         section={section}
         total={draft.sectionOrder.length}
       />
@@ -646,8 +648,17 @@ export function ClientEditor({ initialDraft, mode, onCancel, onSaved, service })
 
     const definition = getSectionDefinitionByType(type);
     if (!definition?.key || draft.sectionOrder.includes(definition.key)) return;
+    const entries = draft[definition.draftField] ?? [];
+    const restoredEntries = definition.uploader === "grouped"
+      ? entries.map((group) => ({
+          ...group,
+          removed: false,
+          items: group.items.map((item) => ({ ...item, removed: false })),
+        }))
+      : entries.map((item) => ({ ...item, removed: false }));
     setDraft({
       ...draft,
+      [definition.draftField]: restoredEntries,
       sectionOrder: [...draft.sectionOrder, definition.key],
     });
   };
@@ -666,6 +677,7 @@ export function ClientEditor({ initialDraft, mode, onCancel, onSaved, service })
     setDraft((current) => ({
       ...current,
       stories: emptyDraft.stories,
+      videoStory: emptyDraft.videoStory,
       posts: emptyDraft.posts,
       carousels: emptyDraft.carousels,
       videos: emptyDraft.videos,
@@ -923,6 +935,9 @@ export function ClientEditor({ initialDraft, mode, onCancel, onSaved, service })
       ) : (
         <>
           {draft.sectionOrder.map(renderContentSection)}
+          {errors.videoStory && (
+            <p className="admin-error">{errors.videoStory}</p>
+          )}
           {errors.customSections && (
             <p className="admin-error">{errors.customSections}</p>
           )}
@@ -937,6 +952,9 @@ export function ClientEditor({ initialDraft, mode, onCancel, onSaved, service })
       )}
       {draft.usesEditions && errors.customSections && (
         <p className="admin-error">{errors.customSections}</p>
+      )}
+      {draft.usesEditions && errors.videoStory && (
+        <p className="admin-error">{errors.videoStory}</p>
       )}
 
       {status && (

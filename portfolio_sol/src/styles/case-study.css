@@ -243,13 +243,13 @@
   place-items: center;
 }
 
-[data-story-presentation="dualPhoneVideo"] .case-study__story-composition {
+[data-story-presentation="dualPhone"] .case-study__story-composition {
   width: min(100%, 52rem);
   gap: clamp(1.5rem, 4vw, 4rem);
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-[data-story-presentation="dualPhoneVideo"] .project-media--story-device {
+[data-story-presentation="dualPhone"] .project-media--story-device {
   width: min(
     100%,
     21rem,
@@ -881,17 +881,17 @@
     padding-block: 5rem 2rem;
   }
 
-  [data-story-presentation="dualPhoneVideo"] .case-study__story-pin {
+  [data-story-presentation="dualPhone"] .case-study__story-pin {
     min-height: auto;
   }
 
-  [data-story-presentation="dualPhoneVideo"] .case-study__story-composition {
+  [data-story-presentation="dualPhone"] .case-study__story-composition {
     width: 100%;
     gap: clamp(4rem, 16vw, 6rem);
     grid-template-columns: minmax(0, 1fr);
   }
 
-  [data-story-presentation="dualPhoneVideo"] .project-media--story-device {
+  [data-story-presentation="dualPhone"] .project-media--story-device {
     width: min(18rem, 78vw, calc((100svh - 7rem) * 360 / 722));
   }
 

@@ -443,7 +443,7 @@ describe("admin destructive operations", () => {
     expect(rpc.mock.calls[0][1].p_payload.client.sort_order).toBe(0);
   });
 
-  it("uploads a replacement story companion through the existing video pipeline", async () => {
+  it("uploads a replacement VideoStory through the existing video pipeline", async () => {
     const upload = vi.fn().mockResolvedValue({ error: null });
     const remove = vi.fn().mockResolvedValue({ error: null });
     const rpc = vi.fn().mockResolvedValue({ error: null });
@@ -471,37 +471,33 @@ describe("admin destructive operations", () => {
           type: "story",
         },
       ],
-      sectionConfig: {
-        storySequence: {
-          presentation: "dualPhoneVideo",
-          companionVideo: {
-            id: "replacement",
-            existing: false,
-            removed: false,
-            file,
-            name: file.name,
-            mimeType: file.type,
-            type: "video",
-            width: 1080,
-            height: 1920,
-            audioEnabled: true,
-            replacedStoragePath: "rambla/stories/old-companion.mp4",
-          },
-        },
-      },
+      videoStory: [{
+        id: "replacement",
+        existing: false,
+        removed: false,
+        file,
+        name: file.name,
+        mimeType: file.type,
+        type: "video",
+        width: 1080,
+        height: 1920,
+        audioEnabled: true,
+        replacedStoragePath: "rambla/stories/old-companion.mp4",
+      }],
     };
 
     await service.saveClient(draft);
 
     expect(upload.mock.calls[0][0]).toMatch(
-      /^rambla\/stories\/companion\/.+-companion\.mp4$/,
+      /^rambla\/video-story\/.+-companion\.mp4$/,
     );
     expect(remove).toHaveBeenCalledWith(["rambla/stories/old-companion.mp4"]);
-    const storySection = rpc.mock.calls[0][1].p_payload.sections.find(
-      (section) => section.section_type === "storySequence",
+    const videoStorySection = rpc.mock.calls[0][1].p_payload.sections.find(
+      (section) => section.section_type === "videoStory",
     );
-    expect(storySection.groups[0].items).toHaveLength(1);
-    expect(storySection.groups[0].items[0].audio_enabled).toBe(true);
+    expect(videoStorySection.groups).toEqual([]);
+    expect(videoStorySection.items).toHaveLength(1);
+    expect(videoStorySection.items[0].audio_enabled).toBe(true);
   });
 
   it("creates a new client row before its first Storage upload", async () => {
@@ -623,15 +619,18 @@ describe("admin destructive operations", () => {
     ).toThrow("fuera del cliente seleccionado");
   });
 
-  it("deletes only the selected client's unique media paths and normalizes order atomically", async () => {
-    const remove = vi.fn().mockResolvedValue({ error: null });
-    const updateEq = vi.fn().mockResolvedValue({ error: null });
-    const rpc = vi.fn().mockResolvedValue({ error: null });
+  it("deletes metadata before removing the selected client's unique media paths", async () => {
+    const callOrder = [];
+    const remove = vi.fn(async () => {
+      callOrder.push("storage");
+      return { error: null };
+    });
+    const rpc = vi.fn(async () => {
+      callOrder.push("metadata");
+      return { error: null };
+    });
     const client = {
       storage: { from: vi.fn(() => ({ remove })) },
-      from: vi.fn(() => ({
-        update: () => ({ eq: updateEq }),
-      })),
       rpc,
     };
     const service = createPortfolioAdminService(client);
@@ -648,10 +647,77 @@ describe("admin destructive operations", () => {
     });
 
     expect(remove).toHaveBeenCalledWith(["maja/videos/one.mp4"]);
-    expect(updateEq).toHaveBeenCalledWith("id", "maja-id");
     expect(rpc).toHaveBeenCalledWith("admin_delete_portfolio_client", {
       p_client_id: "maja-id",
     });
+    expect(callOrder).toEqual(["metadata", "storage"]);
+  });
+
+  it("does not remove Storage when metadata deletion fails", async () => {
+    const remove = vi.fn();
+    const rpc = vi.fn().mockResolvedValue({
+      error: new Error("UPDATE requires a WHERE clause"),
+    });
+    const service = createPortfolioAdminService({
+      storage: { from: vi.fn(() => ({ remove })) },
+      rpc,
+    });
+
+    await expect(service.deleteClient({
+      id: "maja-id",
+      slug: "maja",
+      cover: "maja/logo.png",
+      projects: [{ src: "maja/videos/one.mp4" }],
+    })).rejects.toThrow("No se pudo eliminar la metadata");
+
+    expect(remove).not.toHaveBeenCalled();
+  });
+
+  it("reports pending Storage cleanup after metadata deletion without recreating metadata", async () => {
+    const remove = vi.fn().mockResolvedValue({
+      error: new Error("Storage unavailable"),
+    });
+    const rpc = vi.fn().mockResolvedValue({ error: null });
+    const from = vi.fn();
+    const service = createPortfolioAdminService({
+      storage: { from: vi.fn(() => ({ remove })) },
+      from,
+      rpc,
+    });
+
+    await expect(service.deleteClient({
+      id: "maja-id",
+      slug: "maja",
+      cover: "maja/logo.png",
+      projects: [],
+    })).rejects.toThrow(
+      "El cliente se eliminó de Database, pero quedó pendiente la limpieza de Storage",
+    );
+
+    expect(rpc).toHaveBeenCalledOnce();
+    expect(remove).toHaveBeenCalledOnce();
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("deletes a client without media without calling Storage", async () => {
+    const remove = vi.fn();
+    const rpc = vi.fn().mockResolvedValue({ error: null });
+    const service = createPortfolioAdminService({
+      storage: { from: vi.fn(() => ({ remove })) },
+      rpc,
+    });
+
+    await service.deleteClient({
+      id: "empty-id",
+      slug: "empty-client",
+      cover: null,
+      projects: [],
+    });
+
+    expect(rpc).toHaveBeenCalledWith("admin_delete_portfolio_client", {
+      p_client_id: "empty-id",
+    });
+    expect(remove).not.toHaveBeenCalled();
   });
 
   it("surfaces an unauthorized About update without mutating the draft", async () => {

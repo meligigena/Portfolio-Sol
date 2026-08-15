@@ -23,7 +23,7 @@ function draftId(prefix) {
   return `${prefix}-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`}`;
 }
 
-export function createEmptyAdminDraft() {
+export function createEmptyAdminDraft({ includeSections = true } = {}) {
   return {
     id: null,
     slug: "",
@@ -37,6 +37,7 @@ export function createEmptyAdminDraft() {
     comingSoon: false,
     sortOrder: null,
     stories: [],
+    videoStory: [],
     posts: [],
     carousels: [],
     videos: [],
@@ -44,7 +45,7 @@ export function createEmptyAdminDraft() {
     banners: [],
     bannerTitle: SECTION_TITLES.banners,
     customSections: [],
-    sectionOrder: [...STANDARD_SECTION_KEYS],
+    sectionOrder: includeSections ? [...STANDARD_SECTION_KEYS] : [],
     sectionConfig: {},
     usesEditions: false,
     editionDrafts: [],
@@ -178,10 +179,31 @@ function editionSectionDraft(block) {
     base.items = [];
   }
 
-  if (block.companionVideo) {
-    base.companionVideo = existingItem(block.companionVideo);
-  }
   return base;
+}
+
+function editionSectionDrafts(block) {
+  const section = editionSectionDraft(block);
+  if (block.type !== "storySequence" || !block.companionVideo?.src) {
+    return [section];
+  }
+
+  return [
+    {
+      id: null,
+      tempId: draftId("edition-section"),
+      type: "videoStory",
+      title: SECTION_TITLES.videoStory,
+      originalTitle: null,
+      config: { presentation: "phone" },
+      presentation: "phone",
+      items: [existingItem(block.companionVideo)],
+      groups: [],
+      existing: false,
+      removed: false,
+    },
+    section,
+  ];
 }
 
 function editionDraft(edition, index) {
@@ -202,7 +224,7 @@ function editionDraft(edition, index) {
     comingSoon: edition.comingSoon,
     sections: (edition.content ?? [])
       .filter(hasRenderableContentBlock)
-      .map(editionSectionDraft),
+      .flatMap(editionSectionDrafts),
   };
   nextEdition.originalDraftSignature = editionDraftSignature(nextEdition);
   return nextEdition;
@@ -281,6 +303,7 @@ export function clientToAdminDraft(client) {
   const draft = createEmptyAdminDraft();
   const renderableContent = (client.content ?? []).filter(hasRenderableContentBlock);
   const storyBlock = renderableContent.find((block) => block.type === "storySequence");
+  const videoStoryBlock = renderableContent.find((block) => block.type === "videoStory");
   const bannerBlock = renderableContent.find((block) => block.type === "banners");
   const storagePrefix = client.storagePrefix ?? client.slug;
   const sectionOrder = [];
@@ -289,6 +312,14 @@ export function clientToAdminDraft(client) {
   renderableContent.forEach((block) => {
     const standardKey = getSectionDefinitionByType(block.type)?.key;
     if (standardKey) {
+      if (
+        block.type === "storySequence" &&
+        block.companionVideo?.src &&
+        !videoStoryBlock &&
+        !sectionOrder.includes("videoStory")
+      ) {
+        sectionOrder.push("videoStory");
+      }
       if (!sectionOrder.includes(standardKey)) sectionOrder.push(standardKey);
       return;
     }
@@ -323,6 +354,13 @@ export function clientToAdminDraft(client) {
     comingSoon: !hasRenderableProjectContent(client),
     sortOrder: client.sortOrder ?? null,
     stories: blockItems(client, "storySequence").map(existingItem),
+    videoStory: (
+      blockItems(client, "videoStory").length > 0
+        ? blockItems(client, "videoStory")
+        : storyBlock?.companionVideo
+          ? [storyBlock.companionVideo]
+          : []
+    ).map(existingItem),
     posts: blockItems(client, "postGrid").map(existingItem),
     carousels: blockItems(client, "carouselPairs").map((group) =>
       groupDraft(group, "carousel"),
@@ -340,9 +378,6 @@ export function clientToAdminDraft(client) {
       storySequence: storyBlock
         ? {
             presentation: storyBlock.presentation,
-            companionVideo: storyBlock.companionVideo
-              ? existingItem(storyBlock.companionVideo)
-              : null,
           }
         : {},
     },
@@ -439,8 +474,12 @@ function active(items) {
   return items.filter((item) => !item.removed);
 }
 
-function directSection(type, title, items, resolvedPaths, config = {}) {
-  const serializedItems = active(items).map((item) =>
+function directSection(type, title, items, resolvedPaths, config = {}, maxItems) {
+  const activeItems = active(items);
+  if (maxItems && activeItems.length > maxItems) {
+    throw new Error(`${title} admite un solo video.`);
+  }
+  const serializedItems = activeItems.map((item) =>
     serializeItem(item, resolvedPaths),
   );
   if (serializedItems.length === 0) return null;
@@ -483,14 +522,9 @@ function serializeEditionSection(section, resolvedPaths) {
   const directItems = active(section.items ?? []).map((item) =>
     serializeItem(item, resolvedPaths),
   );
-  const companion = section.companionVideo;
-  if (companion && !companion.removed) {
-    groups.push({
-      group_kind: "story_companion",
-      label: "Video companion",
-      config: {},
-      items: [serializeItem(companion, resolvedPaths)],
-    });
+  const definition = getSectionDefinitionByType(section.type);
+  if (definition?.maxItems && directItems.length > definition.maxItems) {
+    throw new Error(`${definition.label} admite un solo video.`);
   }
 
   return {
@@ -521,6 +555,14 @@ export function buildClientPayload(
       storyConfig.presentation
         ? { presentation: storyConfig.presentation }
         : { presentation: "singlePhone" },
+    ),
+    videoStory: directSection(
+      "videoStory",
+      SECTION_TITLES.videoStory,
+      draft.videoStory ?? [],
+      resolvedPaths,
+      { presentation: "phone" },
+      1,
     ),
     posts: directSection(
       "postGrid",
@@ -578,27 +620,6 @@ export function buildClientPayload(
     .map((key) => sectionsByKey[key] ?? customByKey.get(key) ?? null)
     .filter(Boolean);
 
-  const storySection = sections.find(
-    (section) => section.section_type === "storySequence",
-  );
-  if (
-    storyConfig.companionVideo &&
-    !storyConfig.companionVideo.removed &&
-    storySection
-  ) {
-    const companion = storyConfig.companionVideo;
-    storySection.groups.push({
-      group_kind: "story_companion",
-      label: "Video companion",
-      config: {},
-      items: [
-        {
-          ...serializeItem(companion, resolvedPaths),
-        },
-      ],
-    });
-  }
-
   const slug = draft.slug || slugifyClientName(draft.name);
   const editions = (draft.usesEditions ? draft.editionDrafts ?? [] : [])
     .filter((edition) => !changedOnly || hasEditionDraftChanges(edition))
@@ -655,20 +676,17 @@ export function buildClientPayload(
 export function allDraftItems(draft) {
   return [
     ...draft.stories,
+    ...(draft.videoStory ?? []),
     ...draft.posts,
     ...draft.videos,
     ...draft.carousels.flatMap((group) => group.items),
     ...draft.catalogs.flatMap((group) => group.items),
     ...(draft.banners ?? []),
     ...(draft.customSections ?? []).flatMap((section) => section.items),
-    ...(draft.sectionConfig?.storySequence?.companionVideo
-      ? [draft.sectionConfig.storySequence.companionVideo]
-      : []),
     ...(draft.editionDrafts ?? []).flatMap((edition) =>
       edition.sections.flatMap((section) => [
         ...(section.items ?? []),
         ...(section.groups ?? []).flatMap((group) => group.items),
-        ...(section.companionVideo ? [section.companionVideo] : []),
       ]),
     ),
   ];

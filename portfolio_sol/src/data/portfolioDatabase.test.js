@@ -5,6 +5,51 @@ import {
 } from "./portfolioDatabase";
 
 describe("portfolio database mapping", () => {
+  it("maps the canonical VideoStory section for the public renderer", () => {
+    const [client] = mapPortfolioRowsToClients([{
+      id: "video-story-client",
+      slug: "video-story-client",
+      storage_prefix: "video-story-client",
+      name: "Video Story Client",
+      year: "2026",
+      disciplines: ["Design"],
+      logo_path: "video-story-client/logo.jpg",
+      sort_order: 0,
+      published: true,
+      config: {},
+      portfolio_editions: [],
+      portfolio_sections: [{
+        id: "video-story-section",
+        edition_id: null,
+        section_type: "videoStory",
+        title: "VideoStory",
+        sort_order: 0,
+        config: { presentation: "phone" },
+        portfolio_media_groups: [],
+        portfolio_media_items: [{
+          id: "video-story-item",
+          media_kind: "video",
+          storage_path: "video-story-client/video-story/one.mp4",
+          sort_order: 0,
+          audio_enabled: true,
+          config: { presentation: "phone" },
+        }],
+      }],
+    }]);
+
+    expect(client.content).toEqual([
+      expect.objectContaining({
+        type: "videoStory",
+        items: [
+          expect.objectContaining({
+            type: "video",
+            src: "video-story-client/video-story/one.mp4",
+          }),
+        ],
+      }),
+    ]);
+  });
+
   it("maps a client without a logo without creating an invalid media path", () => {
     const [client] = mapPortfolioRowsToClients([
       {

@@ -24,16 +24,14 @@ function uniqueToken() {
 
 function itemFolder(item, draft) {
   if (draft.stories.includes(item)) return "stories";
+  if ((draft.videoStory ?? []).includes(item)) return "video-story";
   if (draft.posts.includes(item)) return "posts";
   if (draft.videos.includes(item)) return "videos";
   if ((draft.banners ?? []).includes(item)) return "banners";
-  if (draft.sectionConfig?.storySequence?.companionVideo === item) {
-    return "stories/companion";
-  }
 
   for (const edition of draft.editionDrafts ?? []) {
     for (const section of edition.sections) {
-      if (section.items?.includes(item) || section.companionVideo === item) {
+      if (section.items?.includes(item)) {
         return `ediciones/${edition.editionKey}/${slugifyClientName(section.title)}`;
       }
       const group = section.groups?.find((entry) => entry.items.includes(item));
@@ -94,8 +92,8 @@ export function createPortfolioAdminService(
     },
 
     onAuthStateChange(callback) {
-      const { data } = client.auth.onAuthStateChange((_event, session) => {
-        callback(session);
+      const { data } = client.auth.onAuthStateChange((event, session) => {
+        callback(session, event);
       });
       return () => data.subscription.unsubscribe();
     },
@@ -316,28 +314,22 @@ export function createPortfolioAdminService(
       const uniquePaths = [...new Set(paths)];
       assertScopedPaths(uniquePaths, prefix);
 
-      const { error: hideError } = await client
-        .from("portfolio_clients")
-        .update({ published: false })
-        .eq("id", portfolioClient.id);
-      if (hideError) throw hideError;
-
-      const { error: storageError } = await storage.remove(uniquePaths);
-      if (storageError) {
-        await client
-          .from("portfolio_clients")
-          .update({ published: true })
-          .eq("id", portfolioClient.id);
-        throw new Error(`No se pudo eliminar Storage: ${storageError.message}`);
-      }
-
       const { error: deleteError } = await client.rpc(
         "admin_delete_portfolio_client",
         { p_client_id: portfolioClient.id },
       );
       if (deleteError) {
         throw new Error(
-          `Los archivos se eliminaron, pero falló la eliminación de metadata: ${deleteError.message}`,
+          `No se pudo eliminar la metadata; Storage no fue modificado: ${deleteError.message}`,
+        );
+      }
+
+      try {
+        await removeUploaded(storage, uniquePaths);
+      } catch (storageError) {
+        throw new Error(
+          `El cliente se eliminó de Database, pero quedó pendiente la limpieza de Storage: ${storageError.message}`,
+          { cause: storageError },
         );
       }
     },

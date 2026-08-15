@@ -18,6 +18,7 @@ import {
 } from "../data/projectContent";
 import { NotFoundPage } from "./NotFoundPage";
 import { getAdjacentClients } from "../data/clientOrder";
+import { combinePhoneSections } from "./phoneSectionLayout";
 
 export function ClientPage() {
   const { clientSlug } = useParams();
@@ -110,13 +111,32 @@ function ClientCaseStudy({ client, clients }) {
 }
 
 function ContentBlocks({ blocks = [] }) {
-  return blocks.filter(hasRenderableContentBlock).map((block, blockIndex) => (
+  return combinePhoneSections(blocks).map((block, blockIndex) => (
     <ContentBlock block={block} blockIndex={blockIndex} key={block.id ?? `${block.type}-${blockIndex}`} />
   ));
 }
 
 function ContentBlock({ block, blockIndex }) {
   const titleId = `${block.type}-${blockIndex}`;
+
+  if (block.type === "phoneStories") {
+    return (
+      <SequenceSection block={block} className="case-study__stories" titleId={titleId}>
+        <StorySequence
+          projects={block.stories.items ?? []}
+          videoStory={block.videoStory.items?.[0] ?? null}
+        />
+      </SequenceSection>
+    );
+  }
+
+  if (block.type === "videoStory") {
+    return (
+      <SequenceSection block={block} className="case-study__stories" titleId={titleId}>
+        <StorySequence projects={[]} videoStory={block.items?.[0] ?? null} />
+      </SequenceSection>
+    );
+  }
 
   if (block.type === "storySequence") {
     const storyItems = block.items ?? [];
@@ -128,9 +148,8 @@ function ContentBlock({ block, blockIndex }) {
       <SequenceSection block={block} className="case-study__stories" titleId={titleId}>
         {hasStoryPresentation ? (
           <StorySequence
-            companionVideo={block.companionVideo}
-            presentation={block.presentation}
             projects={storyItems}
+            videoStory={block.companionVideo}
           />
         ) : (
           <div className="case-study__story-flow">

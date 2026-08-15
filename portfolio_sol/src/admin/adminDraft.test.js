@@ -8,6 +8,7 @@ import {
   createPendingEditionSection,
   createPendingGroup,
   createPendingCustomSection,
+  createPendingItem,
   hasAdminDraftChanges,
   normalizeAdminText,
 } from "./adminDraft";
@@ -29,6 +30,147 @@ function existingItem(id, type, storagePath, removed = false) {
 }
 
 describe("admin CRUD payloads", () => {
+  it("serializes canonical VideoStory for a new client without editions", () => {
+    const file = new File(["video"], "story.mp4", { type: "video/mp4" });
+    const item = createPendingItem(file, "video", { presentation: "phone" });
+    const draft = {
+      ...createEmptyAdminDraft({ includeSections: false }),
+      name: "New client",
+      year: "2026",
+      discipline: "Design",
+      sectionOrder: ["videoStory"],
+      videoStory: [item],
+    };
+
+    const payload = buildClientPayload(
+      draft,
+      new Map([[item.tempId, "new-client/video-story/story.mp4"]]),
+    );
+
+    expect(payload.sections).toEqual([
+      expect.objectContaining({
+        section_type: "videoStory",
+        groups: [],
+        items: [
+          expect.objectContaining({
+            media_kind: "video",
+            storage_path: "new-client/video-story/story.mp4",
+          }),
+        ],
+      }),
+    ]);
+    expect(payload.editions).toEqual([]);
+  });
+
+  it("hydrates and serializes VideoStory independently from Stories", () => {
+    const draft = clientToAdminDraft({
+      id: "client-id",
+      slug: "example",
+      storagePrefix: "example",
+      name: "Example",
+      year: "2026",
+      disciplines: ["Design"],
+      cover: "example/logo.jpg",
+      content: [
+        {
+          id: "video-story-section",
+          type: "videoStory",
+          title: "VideoStory",
+          items: [
+            {
+              id: "video-story",
+              type: "video",
+              src: "example/video-story/one.mp4",
+              audioEnabled: false,
+            },
+          ],
+        },
+        {
+          id: "stories-section",
+          type: "storySequence",
+          title: "Stories",
+          items: [
+            { id: "story", type: "story", src: "example/stories/one.jpg" },
+          ],
+        },
+      ],
+      editions: [],
+    });
+
+    expect(draft.videoStory).toHaveLength(1);
+    expect(draft.stories).toHaveLength(1);
+    expect(draft.sectionOrder).toEqual(["videoStory", "stories"]);
+
+    const sections = buildClientPayload(draft).sections;
+    expect(sections.map((section) => section.section_type)).toEqual([
+      "videoStory",
+      "storySequence",
+    ]);
+    expect(sections[0].items[0]).toMatchObject({
+      media_kind: "video",
+      storage_path: "example/video-story/one.mp4",
+      audio_enabled: false,
+    });
+    expect(sections[0].groups).toEqual([]);
+  });
+
+  it("rejects a VideoStory payload with more than one active video", () => {
+    const draft = {
+      ...createEmptyAdminDraft(),
+      name: "Example",
+      year: "2026",
+      discipline: "Design",
+      existingLogoPath: "example/logo.jpg",
+      videoStory: [
+        existingItem("one", "video", "example/video-story/one.mp4"),
+        existingItem("two", "video", "example/video-story/two.mp4"),
+      ],
+      sectionOrder: ["videoStory"],
+    };
+
+    expect(() => buildClientPayload(draft)).toThrow(
+      "VideoStory admite un solo video.",
+    );
+  });
+
+  it("serializes canonical VideoStory inside an edition", () => {
+    const edition = createPendingEdition();
+    const section = createPendingEditionSection("videoStory");
+    section.items.push(
+      existingItem(
+        "edition-video-story",
+        "video",
+        "festival/ediciones/edicion-1/video-story.mp4",
+      ),
+    );
+    edition.sections.push(section);
+    const draft = {
+      ...createEmptyAdminDraft({ includeSections: false }),
+      name: "Festival",
+      year: "2026",
+      discipline: "Events",
+      existingLogoPath: "festival/logo.jpg",
+      usesEditions: true,
+      editionDrafts: [edition],
+    };
+
+    const payload = buildClientPayload(draft);
+
+    expect(payload.sections).toEqual([]);
+    expect(payload.editions[0].sections).toEqual([
+      expect.objectContaining({
+        section_type: "videoStory",
+        groups: [],
+        items: [
+          expect.objectContaining({
+            media_kind: "video",
+            storage_path: "festival/ediciones/edicion-1/video-story.mp4",
+          }),
+        ],
+      }),
+    ]);
+  });
+
   it("does not hydrate persisted standard or custom sections without renderable media", () => {
     const draft = clientToAdminDraft({
       id: "client-id",
@@ -658,7 +800,7 @@ describe("admin CRUD payloads", () => {
     expect(serializedGroup).not.toHaveProperty("tempId");
   });
 
-  it("hydrates and persists the Rambla story companion audio setting", () => {
+  it("upgrades and persists the legacy Rambla companion as VideoStory", () => {
     const draft = clientToAdminDraft({
       id: "rambla-id",
       slug: "rambla",
@@ -687,21 +829,20 @@ describe("admin CRUD payloads", () => {
       editions: [],
     });
 
-    expect(draft.sectionConfig.storySequence.companionVideo).toMatchObject({
+    expect(draft.videoStory[0]).toMatchObject({
       existing: true,
       storagePath: "rambla/stories/companion.mp4",
       audioEnabled: false,
     });
 
-    draft.sectionConfig.storySequence.companionVideo.audioEnabled = true;
-    const storySection = buildClientPayload(draft).sections.find(
-      (section) => section.section_type === "storySequence",
+    draft.videoStory[0].audioEnabled = true;
+    const videoStorySection = buildClientPayload(draft).sections.find(
+      (section) => section.section_type === "videoStory",
     );
-    expect(storySection.groups[0]).toMatchObject({
-      group_kind: "story_companion",
-      items: [expect.objectContaining({ audio_enabled: true })],
-    });
-    expect(storySection.groups[0].items).toHaveLength(1);
+    expect(videoStorySection.groups).toEqual([]);
+    expect(videoStorySection.items).toEqual([
+      expect.objectContaining({ audio_enabled: true }),
+    ]);
   });
 
   it("repairs known UTF-8 mojibake without changing correct Spanish text", () => {

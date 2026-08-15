@@ -19,6 +19,7 @@ describe("Admin section registry", () => {
         { label: "Posts", mediaKind: "post", type: "postGrid", uploader: "direct" },
         { label: "Carruseles", mediaKind: "carouselSlide", type: "carouselPairs", uploader: "grouped" },
         { label: "Stories", mediaKind: "story", type: "storySequence", uploader: "direct" },
+        { label: "VideoStory", mediaKind: "video", type: "videoStory", uploader: "direct" },
         { label: "Videos", mediaKind: "video", type: "videoStack", uploader: "direct" },
         { label: "Catálogos", mediaKind: "catalogPage", type: "catalogPair", uploader: "grouped" },
         { label: "Banners", mediaKind: "banner", type: "banners", uploader: "banners" },
@@ -33,6 +34,7 @@ describe("Admin section registry", () => {
     });
 
     expect(available.map((definition) => definition.type)).toEqual([
+      "videoStory",
       "carouselPairs",
       "videoStack",
       "catalogPair",
@@ -56,12 +58,14 @@ describe("Admin section registry", () => {
     expect(secondEdition.map((definition) => definition.type)).toContain("postGrid");
   });
 
-  it("defines the story companion as a single-item Admin media group", () => {
-    expect(getSectionDefinitionByType("storySequence").companion).toMatchObject({
-      groupKind: "story_companion",
-      label: "Video Story",
+  it("defines VideoStory as an independent single-video section", () => {
+    expect(getSectionDefinitionByType("videoStory")).toMatchObject({
+      label: "VideoStory",
       maxItems: 1,
       mediaKind: "video",
+      type: "videoStory",
+      uploader: "direct",
     });
+    expect(getSectionDefinitionByType("storySequence")).not.toHaveProperty("companion");
   });
 });

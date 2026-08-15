@@ -221,6 +221,11 @@ describe("private portfolio admin", () => {
       await screen.findByRole("button", { name: /Añadir nuevo cliente/i }),
     );
 
+    fireEvent.change(screen.getByLabelText("Tipo de sección"), {
+      target: { value: "catalogPair" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /adir secci.n/i }));
+
     const catalogsHeading = screen.getByRole("heading", {
       level: 2,
       name: "Catálogos",
@@ -406,10 +411,17 @@ describe("private portfolio admin", () => {
     );
 
     expect(screen.queryByLabelText("Resumen")).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Tipo de sección"), {
+      target: { value: "banners" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /adir secci.n/i }));
     expect(screen.getByRole("heading", { level: 2, name: "Banners" })).toBeInTheDocument();
     expect(screen.getByLabelText("Título público")).toHaveValue("Banners");
     expect(screen.getByRole("heading", { level: 3, name: "Desktop / tablet grande" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 3, name: "Mobile" })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Tipo de sección"), {
+      target: { value: "customMedia" },
+    });
     fireEvent.click(screen.getByRole("button", { name: /adir secci.n/i }));
     fireEvent.change(screen.getByLabelText("Nombre de la sección"), {
       target: { value: "Identidad visual" },
@@ -466,6 +478,7 @@ describe("private portfolio admin", () => {
     const selector = screen.getByLabelText("Tipo de sección");
     expect([...selector.options].map((option) => option.textContent)).toEqual([
       "Stories",
+      "VideoStory",
       "Carruseles",
       "Videos",
       "Catálogos",
@@ -821,13 +834,140 @@ describe("private portfolio admin", () => {
     fireEvent.click(await screen.findByRole("button", { name: /Rambla/ }));
 
     const videoStory = screen
-      .getByRole("heading", { name: "Video Story" })
-      .closest(".admin-media-group");
+      .getByRole("heading", { name: "VideoStory" })
+      .closest(".admin-editor__section");
     const videoStoryUi = within(videoStory);
     expect(videoStoryUi.getAllByLabelText("Video companion de Rambla")).toHaveLength(1);
     expect(videoStoryUi.getByRole("button", { name: "Reemplazar" })).toBeInTheDocument();
     expect(videoStoryUi.queryByRole("button", { name: "Seleccionar archivos" })).not.toBeInTheDocument();
     expect(videoStoryUi.queryByRole("button", { name: "Seleccionar archivo" })).not.toBeInTheDocument();
     expect(videoStoryUi.getByLabelText("Permitir sonido")).not.toBeChecked();
+  });
+});
+
+describe("Admin state across auth refresh and tab visibility", () => {
+  function authenticatedService(clients = []) {
+    const user = { id: "admin-user" };
+    let authCallback;
+    const service = createService({
+      getSession: vi.fn().mockResolvedValue({ user, access_token: "initial" }),
+      isAdmin: vi.fn().mockResolvedValue(true),
+      listClients: vi.fn().mockResolvedValue(clients),
+      onAuthStateChange: vi.fn((callback) => {
+        authCallback = callback;
+        return () => {};
+      }),
+    });
+    return {
+      emitAuth: (event, session) => authCallback(session, event),
+      service,
+      user,
+    };
+  }
+
+  function cycleVisibility() {
+    let visibility = "hidden";
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => visibility,
+    });
+    fireEvent(document, new Event("visibilitychange"));
+    visibility = "visible";
+    fireEvent(document, new Event("visibilitychange"));
+    fireEvent(window, new Event("focus"));
+  }
+
+  it("keeps the modify-client draft and local File through TOKEN_REFRESHED", async () => {
+    const client = {
+      id: "example-id",
+      slug: "example",
+      storagePrefix: "example",
+      name: "Example",
+      year: "2026",
+      disciplines: ["Design"],
+      cover: "example/logo.jpg",
+      content: [],
+      editions: [],
+    };
+    const { emitAuth, service, user } = authenticatedService([client]);
+    render(<AdminPage service={service} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Modificar cliente/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /Example/ }));
+    fireEvent.change(screen.getByLabelText("Nombre *"), {
+      target: { value: "Example draft" },
+    });
+    const replacement = new File(["draft"], "draft.png", { type: "image/png" });
+    fireEvent.change(document.querySelector('input[type="file"]'), {
+      target: { files: [replacement] },
+    });
+
+    cycleVisibility();
+    emitAuth("TOKEN_REFRESHED", { user, access_token: "refreshed" });
+
+    expect(screen.getByLabelText("Nombre *")).toHaveValue("Example draft");
+    expect(screen.getByAltText("Preview de draft.png")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Panel administrativo" })).not.toBeInTheDocument();
+    expect(service.listClients).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps add-client, About, and client-order drafts on a same-user auth event", async () => {
+    const clients = [
+      { id: "one", name: "One", year: "2026", disciplines: ["Design"] },
+      { id: "two", name: "Two", year: "2026", disciplines: ["Design"] },
+    ];
+
+    const add = authenticatedService(clients);
+    const addRender = render(<AdminPage service={add.service} />);
+    fireEvent.click(await screen.findByRole("button", { name: /adir nuevo cliente/i }));
+    fireEvent.change(screen.getByLabelText("Nombre *"), {
+      target: { value: "Nuevo draft" },
+    });
+    add.emitAuth("SIGNED_IN", { user: add.user, access_token: "same-user" });
+    expect(screen.getByLabelText("Nombre *")).toHaveValue("Nuevo draft");
+    addRender.unmount();
+
+    const about = authenticatedService(clients);
+    const aboutRender = render(<AdminPage service={about.service} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Editar Sobre/i }));
+    const aboutInput = await screen.findByDisplayValue(aboutContent.graphicDesign[0]);
+    fireEvent.change(aboutInput, { target: { value: "About draft" } });
+    about.emitAuth("TOKEN_REFRESHED", { user: about.user, access_token: "next" });
+    expect(screen.getByDisplayValue("About draft")).toBeInTheDocument();
+    aboutRender.unmount();
+
+    const order = authenticatedService(clients);
+    render(<AdminPage service={order.service} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Ordenar clientes/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Mover Two hacia arriba/i }));
+    order.emitAuth("TOKEN_REFRESHED", { user: order.user, access_token: "next" });
+    expect(screen.getAllByTestId("client-order-name").map((node) => node.textContent)).toEqual([
+      "Two",
+      "One",
+    ]);
+  });
+
+  it("leaves the editor only for a real SIGNED_OUT event", async () => {
+    const client = {
+      id: "example-id",
+      slug: "example",
+      name: "Example",
+      year: "2026",
+      disciplines: ["Design"],
+      cover: "example/logo.jpg",
+      content: [],
+      editions: [],
+    };
+    const { emitAuth, service } = authenticatedService([client]);
+    render(<AdminPage service={service} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Modificar cliente/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /Example/ }));
+    emitAuth("SIGNED_OUT", null);
+
+    expect(
+      await screen.findByRole("heading", { name: /Administraci.n portfolio/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("Nombre *")).not.toBeInTheDocument();
   });
 });

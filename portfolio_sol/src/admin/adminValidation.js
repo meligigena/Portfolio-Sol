@@ -54,6 +54,21 @@ export function validateClientDraft(draft, { editing = false } = {}) {
   if (!draft.logo && !editing) {
     errors.logo = "El logo es obligatorio.";
   }
+  if ((draft.videoStory ?? []).filter((item) => !item.removed).length > 1) {
+    errors.videoStory = "VideoStory admite un solo video.";
+  }
+  if (
+    draft.editionDrafts?.some((edition) =>
+      edition.sections.some(
+        (section) =>
+          !section.removed &&
+          section.type === "videoStory" &&
+          (section.items ?? []).filter((item) => !item.removed).length > 1,
+      ),
+    )
+  ) {
+    errors.videoStory = "VideoStory admite un solo video por edición.";
+  }
   if (
     draft.customSections?.some(
       (section) => !section.removed && !section.title?.trim(),

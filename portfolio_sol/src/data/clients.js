@@ -620,9 +620,15 @@ const clientCatalog = [
         items: ramblaBrandBanners,
       },
       {
+        id: "rambla-video-story",
+        type: "videoStory",
+        eyebrow: "INSTAGRAM",
+        title: "VideoStory",
+        items: [ramblaStoryVideo],
+      },
+      {
+        id: "rambla-stories",
         type: "storySequence",
-        presentation: "dualPhoneVideo",
-        companionVideo: ramblaStoryVideo,
         eyebrow: "INSTAGRAM",
         title: "Stories",
         items: ramblaStories,

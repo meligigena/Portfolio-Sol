@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { DisplayHeading } from "../components/typography/DisplayHeading";
 import { clientToAdminDraft, createEmptyAdminDraft } from "./adminDraft";
 import { AboutEditor } from "./AboutEditor";
@@ -217,6 +217,7 @@ export function AdminPage({ service = portfolioAdminService }) {
   const [authLoading, setAuthLoading] = useState(false);
   const [aboutContent, setAboutContent] = useState(null);
   const [aboutLoadError, setAboutLoadError] = useState("");
+  const sessionUserIdRef = useRef(null);
 
   const refreshClients = async () => {
     const nextClients = await service.listClients();
@@ -225,6 +226,7 @@ export function AdminPage({ service = portfolioAdminService }) {
 
   const acceptSession = async (nextSession) => {
     if (!nextSession?.user) {
+      sessionUserIdRef.current = null;
       setSession(null);
       setPhase("login");
       return;
@@ -240,6 +242,7 @@ export function AdminPage({ service = portfolioAdminService }) {
     }
 
     setSession(nextSession);
+    sessionUserIdRef.current = nextSession.user.id;
     await refreshClients();
     setPhase("dashboard");
   };
@@ -256,12 +259,18 @@ export function AdminPage({ service = portfolioAdminService }) {
         }
       });
     const unsubscribe = service.onAuthStateChange((nextSession) => {
-      if (active && nextSession?.user?.id !== session?.user?.id) {
-        acceptSession(nextSession).catch((error) => {
-          setAuthError(error.message);
-          setPhase("login");
-        });
+      if (!active) return;
+      if (
+        nextSession?.user &&
+        nextSession.user.id === sessionUserIdRef.current
+      ) {
+        setSession(nextSession);
+        return;
       }
+      acceptSession(nextSession).catch((error) => {
+        setAuthError(error.message);
+        setPhase("login");
+      });
     });
     return () => {
       active = false;
@@ -286,6 +295,7 @@ export function AdminPage({ service = portfolioAdminService }) {
 
   const logout = async () => {
     await service.signOut();
+    sessionUserIdRef.current = null;
     setSession(null);
     setClients([]);
     setPhase("login");
@@ -313,7 +323,7 @@ export function AdminPage({ service = portfolioAdminService }) {
   const editorDraft = useMemo(
     () =>
       phase === "create"
-        ? createEmptyAdminDraft()
+        ? createEmptyAdminDraft({ includeSections: false })
         : selectedClient
           ? clientToAdminDraft(selectedClient)
           : null,
