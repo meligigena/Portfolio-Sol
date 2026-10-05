@@ -1,12 +1,14 @@
 import { useRef } from "react";
 import { gsap, useGSAP } from "../../animations/gsap";
-import { portfolioMediaUrl } from "../../lib/portfolioMedia";
+import { responsiveImageProps } from "../../lib/responsiveImage";
 
-export function ResponsiveBrandBanner({ items, presentation }) {
+export function ResponsiveBrandBanner({ items, presentation, priority = false }) {
   const rootRef = useRef(null);
   const desktop = items.find((item) => item.viewport === "desktop");
   const mobile = items.find((item) => item.viewport === "mobile");
   const fallback = desktop ?? mobile;
+  const fallbackImage = fallback ? responsiveImageProps(fallback, "100vw") : null;
+  const mobileImage = mobile ? responsiveImageProps(mobile, "100vw") : null;
 
   useGSAP(
     () => {
@@ -69,7 +71,8 @@ export function ResponsiveBrandBanner({ items, presentation }) {
           {desktop && mobile && (
             <source
               media="(max-width: 47.99rem)"
-              srcSet={portfolioMediaUrl(mobile.src)}
+              srcSet={mobileImage.srcSet ?? mobileImage.src}
+              sizes={mobileImage.sizes}
             />
           )}
           <img
@@ -77,8 +80,9 @@ export function ResponsiveBrandBanner({ items, presentation }) {
             data-brand-banner-image
             decoding="async"
             height={fallback.height}
-            loading="lazy"
-            src={portfolioMediaUrl(fallback.src)}
+            loading={priority ? "eager" : "lazy"}
+            fetchPriority={priority ? "high" : undefined}
+            {...fallbackImage}
             width={fallback.width}
           />
         </picture>

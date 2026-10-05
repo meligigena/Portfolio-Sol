@@ -1,4 +1,5 @@
 import { fetchAdminPortfolioClients } from "../data/portfolioDatabase";
+import { createWebImageVariants } from "./imageVariants";
 import { getSupabaseBrowserClient } from "../lib/supabase";
 import { ABOUT_CONTENT_KEY, fetchAboutContent } from "../data/siteContent";
 import {
@@ -70,6 +71,14 @@ async function removeUploaded(storage, paths) {
   if (paths.length === 0) return;
   const { error } = await storage.remove(paths);
   if (error) throw error;
+}
+
+function variantPaths(item) {
+  return (item?.config?.webVariants ?? []).map((variant) => variant.path);
+}
+
+export function variantPath(originalPath, width) {
+  return `${originalPath.replace(/\.[^/.]+$/, "")}-web-${width}.webp`;
 }
 
 export function assertScopedPaths(paths, prefix) {
@@ -241,13 +250,36 @@ export function createPortfolioAdminService(
             fileName: job.file.name,
           });
           const { error } = await storage.upload(job.path, job.file, {
-            cacheControl: "3600",
+            cacheControl: "31536000",
             contentType: job.file.type,
             upsert: false,
           });
           if (error) throw new Error(`Falló la subida de ${job.file.name}: ${error.message}`);
           uploadedPaths.push(job.path);
-          resolvedPaths.set(job.id, job.path);
+          if (job.id === "logo" || !job.file.type.startsWith("image/")) {
+            resolvedPaths.set(job.id, job.path);
+            continue;
+          }
+
+          let variants = [];
+          try {
+            variants = await createWebImageVariants(job.file);
+          } catch (optimizationError) {
+            console.warn(`Web optimization failed for ${job.file.name}.`, optimizationError);
+          }
+          const webVariants = [];
+          for (const variant of variants) {
+            const path = variantPath(job.path, variant.width);
+            const { error: variantError } = await storage.upload(path, variant.blob, {
+              cacheControl: "31536000",
+              contentType: "image/webp",
+              upsert: false,
+            });
+            if (variantError) throw new Error(`Falló la variante web de ${job.file.name}: ${variantError.message}`);
+            uploadedPaths.push(path);
+            webVariants.push({ width: variant.width, path });
+          }
+          resolvedPaths.set(job.id, { original: job.path, webVariants });
         }
 
         const payload = buildClientPayload(
@@ -267,9 +299,9 @@ export function createPortfolioAdminService(
         const removedPaths = [
           ...allDraftItems(draft)
             .filter((item) => item.existing && item.removed)
-            .map((item) => item.storagePath),
+            .flatMap((item) => [item.storagePath, ...variantPaths(item)]),
           ...allDraftItems(draft)
-            .map((item) => item.replacedStoragePath)
+            .flatMap((item) => [item.replacedStoragePath, ...(item.replacedVariantPaths ?? [])])
             .filter(Boolean),
           ...((draft.logo || draft.logoRemoved) && draft.existingLogoPath
             ? [draft.existingLogoPath]
@@ -309,7 +341,7 @@ export function createPortfolioAdminService(
       const prefix = portfolioClient.storagePrefix ?? portfolioClient.slug;
       const paths = [
         portfolioClient.cover,
-        ...(portfolioClient.projects ?? []).map((item) => item.src),
+        ...(portfolioClient.projects ?? []).flatMap((item) => [item.src, ...variantPaths(item)]),
       ].filter(Boolean);
       const uniquePaths = [...new Set(paths)];
       assertScopedPaths(uniquePaths, prefix);

@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { gsap, useGSAP } from "../../animations/gsap";
 import { ProjectMedia } from "./ProjectMedia";
 
-export function PostGrid({ items = [] }) {
+export function PostGrid({ items = [], priority = false }) {
   const gridRef = useRef(null);
   const postPairs = Array.from(
     { length: Math.ceil(items.length / 2) },
@@ -100,6 +100,7 @@ export function PostGrid({ items = [] }) {
             <ProjectMedia
               project={project}
               index={pairIndex * 2 + itemIndex}
+              priority={priority && pairIndex === 0 && itemIndex === 0}
               key={project.id}
             />
           ))}

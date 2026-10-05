@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { act, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { StorySequence } from "./StorySequence";
 
 const story = {
@@ -21,7 +21,55 @@ const videoStory = {
   audioEnabled: false,
 };
 
+afterEach(() => vi.unstubAllGlobals());
+
 describe("StorySequence phone composition", () => {
+  it("warms the mounted VideoStory before viewport entry without restarting its source", () => {
+    const observers = [];
+    vi.stubGlobal("IntersectionObserver", class {
+      constructor(callback, options) { this.callback = callback; this.options = options; observers.push(this); }
+      observe() {}
+      disconnect() {}
+    });
+    const play = vi.spyOn(HTMLMediaElement.prototype, "play");
+    const { container, rerender } = render(<StorySequence videoStory={videoStory} />);
+    const video = container.querySelector("video");
+    const src = video.src;
+    const near = observers.find((observer) => observer.options?.rootMargin);
+    act(() => near.callback([{ target: container.firstChild, isIntersecting: true }]));
+    expect(video).toHaveAttribute("preload", "auto");
+    expect(play).not.toHaveBeenCalled();
+    rerender(<StorySequence videoStory={{ ...videoStory }} />);
+    expect(container.querySelector("video")).toBe(video);
+    expect(video.src).toBe(src);
+    expect(video).toHaveAttribute("preload", "auto");
+  });
+  it("assigns URLs only to the first two story slides before scrolling", () => {
+    const projects = Array.from({ length: 5 }, (_, index) => ({
+      ...story,
+      id: `story-${index}`,
+      src: `example/stories/${index}.jpg`,
+    }));
+    const { container } = render(<StorySequence projects={projects} />);
+    const images = [...container.querySelectorAll("[data-story-slide] img")];
+
+    expect(images).toHaveLength(5);
+    expect(images[0]).toHaveAttribute("src", expect.stringContaining("/0.jpg"));
+    expect(images[1]).toHaveAttribute("src", expect.stringContaining("/1.jpg"));
+    expect(images.slice(2).every((image) => !image.hasAttribute("src"))).toBe(true);
+  });
+
+  it("prioritizes only the first story when it is the first media section", () => {
+    const { container } = render(
+      <StorySequence projects={[story, { ...story, id: "second", src: "example/stories/two.jpg" }]} priority />,
+    );
+    const images = [...container.querySelectorAll("[data-story-slide] img")];
+
+    expect(images[0]).toHaveAttribute("loading", "eager");
+    expect(images[0]).toHaveAttribute("fetchpriority", "high");
+    expect(images[1]).toHaveAttribute("loading", "lazy");
+  });
+
   it("renders Stories only in one centered phone", () => {
     const { container } = render(<StorySequence projects={[story]} />);
 

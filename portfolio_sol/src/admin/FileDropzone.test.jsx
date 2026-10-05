@@ -272,6 +272,38 @@ describe("FileDropzone previews", () => {
     ]);
   });
 
+  it("carries old web variant paths when replacing an image", async () => {
+    const onItemsChange = vi.fn();
+    const { container } = render(
+      <DropzoneHarness
+        initialItems={[{
+          id: "banner",
+          existing: true,
+          removed: false,
+          storagePath: "rambla/banners/original.jpg",
+          name: "original.jpg",
+          type: "image",
+          config: { webVariants: [{ width: 720, path: "rambla/banners/original-web-720.webp" }] },
+        }]}
+        maxItems={1}
+        mediaKind="image"
+        onItemsChange={onItemsChange}
+      />,
+    );
+
+    fireEvent.change(container.querySelector('input[type="file"]'), {
+      target: { files: [new File(["replacement"], "new.jpg", { type: "image/jpeg" })] },
+    });
+
+    expect(await screen.findByAltText("Preview de new.jpg")).toBeInTheDocument();
+    expect(onItemsChange).toHaveBeenLastCalledWith([
+      expect.objectContaining({
+        replacedStoragePath: "rambla/banners/original.jpg",
+        replacedVariantPaths: ["rambla/banners/original-web-720.webp"],
+      }),
+    ]);
+  });
+
   it("marks the persisted single video for removal and exposes the empty slot", () => {
     const onItemsChange = vi.fn();
     render(

@@ -337,6 +337,28 @@ describe("admin CRUD payloads", () => {
     expect(buildClientPayload(draft).editions[0].sections).toEqual([]);
   });
 
+  it("stores web variant paths in media config while keeping the uploaded original", () => {
+    const file = new File(["original"], "post.jpg", { type: "image/jpeg" });
+    const item = createPendingItem(file, "post", { width: 1080, height: 1350 });
+    const draft = {
+      ...createEmptyAdminDraft(),
+      name: "Festival",
+      year: "2026",
+      discipline: "Design",
+      posts: [item],
+    };
+    const variants = [{ width: 720, path: "festival/posts/post-web-720.webp" }];
+    const paths = new Map([[item.tempId, {
+      original: "festival/posts/post.jpg",
+      webVariants: variants,
+    }]]);
+
+    const media = buildClientPayload(draft, paths).sections[0].items[0];
+    expect(media.storage_path).toBe("festival/posts/post.jpg");
+    expect(media.mime_type).toBe("image/jpeg");
+    expect(media.config.webVariants).toEqual(variants);
+  });
+
   it("omits a persisted standard section after its last file is removed", () => {
     const draft = clientToAdminDraft({
       id: "client-id",

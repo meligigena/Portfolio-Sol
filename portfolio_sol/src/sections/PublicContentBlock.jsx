@@ -10,13 +10,13 @@ import { DisplayHeading } from "../components/typography/DisplayHeading";
 import { getStandardSectionDefinitionByType } from "./sectionRegistry";
 
 const PUBLIC_RENDERERS = {
-  storySequence: (block) => {
+  storySequence: (block, priority) => {
     const items = block.items ?? [];
     const hasPresentation =
       items.some((item) => item.src) || Boolean(block.companionVideo?.src);
 
     return hasPresentation ? (
-      <StorySequence projects={items} videoStory={block.companionVideo} />
+      <StorySequence projects={items} videoStory={block.companionVideo} priority={priority} />
     ) : (
       <div className="case-study__story-flow">
         {items.map((project, index) => (
@@ -28,31 +28,32 @@ const PUBLIC_RENDERERS = {
   videoStory: (block) => (
     <StorySequence projects={[]} videoStory={block.items?.[0] ?? null} />
   ),
-  postGrid: (block) => <PostGrid items={block.items ?? []} />,
+  postGrid: (block, priority) => <PostGrid items={block.items ?? []} priority={priority} />,
   carouselPairs: (block) => <CarouselPairs items={block.items ?? []} />,
   videoStack: (block) => <VideoStack items={block.items ?? []} />,
   catalogPair: (block) => <CatalogPair items={block.items ?? []} />,
   mediaRows: (block) => <MediaRows rows={block.rows ?? []} />,
-  banners: (block) => (
+  banners: (block, priority) => (
     <ResponsiveBrandBanner
       items={block.items ?? []}
       presentation={block.presentation}
+      priority={priority}
     />
   ),
 };
 
-function CustomMedia({ block }) {
+function CustomMedia({ block, priority }) {
   const hasResponsivePair =
     block.presentation === "responsiveBanner" &&
     block.items.some((item) => item.viewport === "desktop") &&
     block.items.some((item) => item.viewport === "mobile");
 
   return hasResponsivePair ? (
-    <ResponsiveBrandBanner items={block.items} presentation={block.presentation} />
+    <ResponsiveBrandBanner items={block.items} presentation={block.presentation} priority={priority} />
   ) : (
     <div className="case-study__custom-media-grid">
       {block.items.map((project, index) => (
-        <ProjectMedia project={project} index={index} key={project.id} />
+        <ProjectMedia project={project} index={index} key={project.id} priority={priority && index === 0} />
       ))}
     </div>
   );
@@ -102,6 +103,7 @@ export function PublicContentBlock({ block, blockIndex }) {
         <StorySequence
           projects={block.stories.items ?? []}
           videoStory={block.videoStory.items?.[0] ?? null}
+          priority={blockIndex === 0}
         />
       </SequenceSection>
     );
@@ -116,7 +118,7 @@ export function PublicContentBlock({ block, blockIndex }) {
         renderer="customMedia"
         titleId={titleId}
       >
-        <CustomMedia block={{ ...block, items: block.items ?? [] }} />
+        <CustomMedia block={{ ...block, items: block.items ?? [] }} priority={blockIndex === 0} />
       </SequenceSection>
     );
   }
@@ -133,7 +135,7 @@ export function PublicContentBlock({ block, blockIndex }) {
       renderer={definition.public.renderer}
       titleId={titleId}
     >
-      {render(block)}
+      {render(block, blockIndex === 0)}
     </SequenceSection>
   );
 }

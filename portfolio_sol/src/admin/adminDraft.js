@@ -445,9 +445,10 @@ export function createPendingGroup(kind, index) {
 }
 
 function serializeItem(item, resolvedPaths) {
+  const uploaded = item.existing ? null : resolvedPaths.get(item.tempId);
   const storagePath = item.existing
     ? item.storagePath
-    : resolvedPaths.get(item.tempId);
+    : typeof uploaded === "string" ? uploaded : uploaded?.original;
 
   return {
     id: item.id ?? undefined,
@@ -465,6 +466,7 @@ function serializeItem(item, resolvedPaths) {
       item.type === "video" ? item.audioEnabled !== false : null,
     config: {
       ...(item.config ?? {}),
+      ...(uploaded?.webVariants?.length ? { webVariants: uploaded.webVariants } : {}),
       presentation: item.presentation,
       viewport: item.viewport,
     },

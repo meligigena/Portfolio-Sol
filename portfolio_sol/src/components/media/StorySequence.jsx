@@ -1,29 +1,58 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { gsap, useGSAP } from "../../animations/gsap";
 import { portfolioMediaUrl } from "../../lib/portfolioMedia";
+import { imageSequenceKey, warmImageProps } from "../../lib/imageWarmPreload";
+import { useImageWarmPreload } from "./useImageWarmPreload";
 import { SoundToggleButton } from "./SoundToggleButton";
 import { useVideoViewportVisibility } from "./useVideoViewportVisibility";
 import { claimVideoSound, VIDEO_SOUND_OWNER_EVENT } from "./videoSound";
+import { useVideoWarmPreload } from "./useVideoWarmPreload";
+import { usePortfolioData } from "../../data/PortfolioDataContext";
 
-export function StorySequence({ companionVideo = null, projects = [], videoStory = null }) {
+export function StorySequence({ companionVideo = null, priority = false, projects = [], videoStory = null }) {
   const sequenceRef = useRef(null);
   const ownerId = useId();
   const [soundEnabled, setSoundEnabled] = useState(false);
+  const [imagePosition, setImagePosition] = useState({ key: "", index: 0 });
+  const { source: dataSource } = usePortfolioData();
+  const mediaReady = dataSource !== "loading";
   const resolvedVideoStory = videoStory ?? companionVideo;
   const storyProjects = projects.filter((project) => Boolean(project?.src));
+  const imageSizes = "(max-width: 48rem) 86vw, 342px";
+  const imageKey = imageSequenceKey([storyProjects], imageSizes);
+  useImageWarmPreload({
+    containerRef: sequenceRef,
+    mediaKey: imageKey,
+    activeIndex: imagePosition.key === imageKey ? imagePosition.index : 0,
+    ahead: 2,
+    enabled: mediaReady,
+  });
   const hasStories = storyProjects.length > 0;
   const hasVideoStory = Boolean(resolvedVideoStory?.src);
   const isDualPhone = hasStories && hasVideoStory;
   const audioAllowed = resolvedVideoStory?.audioEnabled !== false;
+  const mediaKey = `${resolvedVideoStory?.id ?? ""}:${resolvedVideoStory?.src ?? ""}`;
+  const onVisible = (video) => {
+    if (!canStart(video)) return;
+    video.muted = !audioAllowed || !soundEnabled;
+    video.play()?.catch?.(() => {});
+  };
+  const canStart = useVideoWarmPreload({
+    containerRef: sequenceRef,
+    enabled: mediaReady,
+    mediaKey,
+    activeIndex: 0,
+    onPrepared: (video) => {
+      if (video.dataset.viewportVisible === "true") onVisible(video);
+    },
+  });
 
   useVideoViewportVisibility({
     containerRef: sequenceRef,
-    observeKey: resolvedVideoStory,
+    enabled: mediaReady,
+    observeKey: mediaKey,
     onHidden: () => setSoundEnabled(false),
-    onVisible: (video) => {
-      video.muted = !audioAllowed || !soundEnabled;
-      video.play()?.catch?.(() => {});
-    },
+    onVisible,
   });
 
   useEffect(() => {
@@ -81,6 +110,11 @@ export function StorySequence({ companionVideo = null, projects = [], videoStory
             scrub: 0.8,
             anticipatePin: 1,
             invalidateOnRefresh: true,
+            onUpdate: (self) => {
+              const index = Math.min(slideCount - 1, Math.ceil(self.progress * (slideCount - 1)));
+              setImagePosition((previous) => previous.key === imageKey && previous.index === index
+                ? previous : { key: imageKey, index });
+            },
           },
         });
       };
@@ -163,7 +197,7 @@ export function StorySequence({ companionVideo = null, projects = [], videoStory
             <div className="project-media__phone">
               <div className="project-media__phone-screen">
                 <div className="project-media__story-track" data-story-track>
-                  {storyProjects.map((project) => (
+                  {storyProjects.map((project, index) => (
                     <div
                       className="project-media__story-slide"
                       data-story-slide
@@ -171,11 +205,12 @@ export function StorySequence({ companionVideo = null, projects = [], videoStory
                     >
                       {project.src ? (
                         <img
-                          src={portfolioMediaUrl(project.src)}
+                          {...warmImageProps(project, imageSizes, index, mediaReady)}
                           alt={project.alt}
                           width={project.width}
                           height={project.height}
-                          loading="lazy"
+                          loading={priority && index === 0 ? "eager" : "lazy"}
+                          fetchPriority={priority && index === 0 ? "high" : undefined}
                           decoding="async"
                         />
                       ) : (

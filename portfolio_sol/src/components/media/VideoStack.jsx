@@ -5,6 +5,8 @@ import { useVideoViewportVisibility } from "./useVideoViewportVisibility";
 import { claimVideoSound, VIDEO_SOUND_OWNER_EVENT } from "./videoSound";
 import { portfolioMediaUrl } from "../../lib/portfolioMedia";
 import { shouldResetVideoStackSound } from "./videoStackSound";
+import { useVideoWarmPreload } from "./useVideoWarmPreload";
+import { usePortfolioData } from "../../data/PortfolioDataContext";
 
 export function VideoStack({ items }) {
   const stackRef = useRef(null);
@@ -12,10 +14,28 @@ export function VideoStack({ items }) {
   const ownerId = useId();
   const [activeIndex, setActiveIndex] = useState(0);
   const [soundEnabled, setSoundEnabled] = useState(false);
+  const { source: dataSource } = usePortfolioData();
+  const mediaReady = dataSource !== "loading";
+  const mediaKey = items.map((item) => `${item.id}:${item.src}`).join("|");
+  const canStart = useVideoWarmPreload({
+    containerRef: stackRef,
+    enabled: mediaReady,
+    mediaKey,
+    activeIndex,
+    onPrepared: (video) => {
+      const index = [...(stackRef.current?.querySelectorAll("video") ?? [])].indexOf(video);
+      if (index === activeIndex && video.dataset.viewportVisible === "true") {
+        video.muted = items[index]?.audioEnabled === false || !soundEnabled ||
+          previousActiveIndexRef.current !== activeIndex;
+        video.play()?.catch?.(() => {});
+      }
+    },
+  });
 
   useVideoViewportVisibility({
     containerRef: stackRef,
-    observeKey: items,
+    enabled: mediaReady,
+    observeKey: mediaKey,
     onHidden: (video) => {
       const videos = [...(stackRef.current?.querySelectorAll("video") ?? [])];
 
@@ -27,7 +47,7 @@ export function VideoStack({ items }) {
       const videos = [...(stackRef.current?.querySelectorAll("video") ?? [])];
       const videoIndex = videos.indexOf(video);
 
-      if (videoIndex === activeIndex) {
+      if (videoIndex === activeIndex && canStart(video)) {
         const audioAllowed = items[videoIndex]?.audioEnabled !== false;
         video.muted = !audioAllowed || !soundEnabled;
         video.play()?.catch?.(() => {});
@@ -111,12 +131,13 @@ export function VideoStack({ items }) {
       const isActive = index === activeIndex;
       const audioAllowed = items[index]?.audioEnabled !== false;
 
-      const isVisible = video.dataset.viewportVisible !== "false";
+      const isVisible = video.dataset.viewportVisible === "true" ||
+        (typeof IntersectionObserver === "undefined" && video.dataset.viewportVisible !== "false");
 
       video.muted =
         !audioAllowed || !isActive || !isVisible || !soundEnabled || resetSound;
-      if (isActive) {
-        if (isVisible) {
+      if (isActive && mediaReady) {
+        if (isVisible && canStart(video)) {
           video.play()?.catch?.(() => {});
         } else {
           video.pause();
@@ -127,7 +148,7 @@ export function VideoStack({ items }) {
     });
 
     return () => videos.forEach((video) => video.pause());
-  }, [activeIndex, items, soundEnabled]);
+  }, [activeIndex, canStart, items, mediaReady, soundEnabled]);
 
   useEffect(() => {
     const releaseSound = (event) => {
@@ -194,7 +215,7 @@ export function VideoStack({ items }) {
                     }
                   }}
                   playsInline
-                  preload={index === activeIndex ? "auto" : "none"}
+                  preload="none"
                   width={item.width}
                 >
                   <source src={portfolioMediaUrl(item.src)} />

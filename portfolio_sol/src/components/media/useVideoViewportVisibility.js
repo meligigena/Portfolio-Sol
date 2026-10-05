@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 
 export function useVideoViewportVisibility({
   containerRef,
+  enabled = true,
   observeKey,
   onHidden,
   onVisible,
@@ -14,6 +15,14 @@ export function useVideoViewportVisibility({
 
   useEffect(() => {
     const videos = [...(containerRef.current?.querySelectorAll("video") ?? [])];
+
+    if (!enabled) {
+      videos.forEach((video) => {
+        video.muted = true;
+        video.pause();
+      });
+      return undefined;
+    }
 
     if (typeof IntersectionObserver === "undefined") {
       return () => {
@@ -54,5 +63,5 @@ export function useVideoViewportVisibility({
         video.pause();
       });
     };
-  }, [containerRef, observeKey]);
+  }, [containerRef, enabled, observeKey]);
 }

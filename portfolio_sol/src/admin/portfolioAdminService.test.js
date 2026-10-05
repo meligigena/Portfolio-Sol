@@ -123,6 +123,31 @@ function tardeoReorderDraft() {
 }
 
 describe("admin destructive operations", () => {
+  it("removes generated variants with their media when deleting a client", async () => {
+    const remove = vi.fn().mockResolvedValue({ error: null });
+    const rpc = vi.fn().mockResolvedValue({ error: null });
+    const service = createPortfolioAdminService({
+      storage: { from: () => ({ remove }) },
+      rpc,
+    });
+
+    await service.deleteClient({
+      id: "client-id",
+      slug: "example",
+      storagePrefix: "example",
+      cover: null,
+      projects: [{
+        src: "example/posts/original.jpg",
+        config: { webVariants: [{ width: 720, path: "example/posts/original-web-720.webp" }] },
+      }],
+    });
+
+    expect(remove).toHaveBeenCalledWith([
+      "example/posts/original.jpg",
+      "example/posts/original-web-720.webp",
+    ]);
+  });
+
   it("removes an existing logo only after the client was saved without its reference", async () => {
     const callOrder = [];
     const remove = vi.fn(async () => {
@@ -435,12 +460,58 @@ describe("admin destructive operations", () => {
     expect(upload.mock.calls[0][0]).not.toContain("legacy-logo-folder");
     expect(upload.mock.calls[0][1]).toBe(file);
     expect(upload.mock.calls[0][2]).toEqual({
-      cacheControl: "3600",
+      cacheControl: "31536000",
       contentType: "image/jpeg",
       upsert: false,
     });
     expect(rpc).toHaveBeenCalledAfter(upload);
     expect(rpc.mock.calls[0][1].p_payload.client.sort_order).toBe(0);
+  });
+
+  it("uploads web variants beside the untouched original and records their paths", async () => {
+    const file = new File([new Uint8Array(2000)], "design.jpg", { type: "image/jpeg" });
+    const item = createPendingItem(file, "post", { width: 1080, height: 1350 });
+    const upload = vi.fn().mockResolvedValue({ error: null });
+    const rpc = vi.fn().mockResolvedValue({ error: null });
+    const service = createPortfolioAdminService({
+      storage: { from: () => ({ upload, remove: vi.fn() }) },
+      rpc,
+    });
+    vi.stubGlobal("createImageBitmap", vi.fn(async () => ({ width: 1080, height: 1350, close: vi.fn() })));
+    const createElement = document.createElement.bind(document);
+    const canvasSpy = vi.spyOn(document, "createElement").mockImplementation((tag) =>
+      tag === "canvas"
+        ? { width: 0, height: 0, getContext: () => ({ drawImage: vi.fn() }), toBlob: (callback) => callback(new Blob([new Uint8Array(100)], { type: "image/webp" })) }
+        : createElement(tag),
+    );
+
+    try {
+      await service.saveClient({
+        ...createEmptyAdminDraft(),
+        id: "client-id",
+        slug: "example",
+        storagePrefix: "example",
+        name: "Example",
+        year: "2026",
+        discipline: "Design",
+        posts: [item],
+      });
+
+      expect(upload).toHaveBeenCalledTimes(3);
+      const [originalPath, originalFile] = upload.mock.calls[0];
+      expect(originalPath).toMatch(/^example\/posts\/.+-design\.jpg$/);
+      expect(originalFile).toBe(file);
+      expect(upload.mock.calls.slice(1).map(([path]) => path)).toEqual([
+        originalPath.replace(/\.jpg$/, "-web-720.webp"),
+        originalPath.replace(/\.jpg$/, "-web-1080.webp"),
+      ]);
+      const media = rpc.mock.calls[0][1].p_payload.sections[0].items[0];
+      expect(media.storage_path).toBe(originalPath);
+      expect(media.config.webVariants.map(({ width }) => width)).toEqual([720, 1080]);
+    } finally {
+      canvasSpy.mockRestore();
+      vi.unstubAllGlobals();
+    }
   });
 
   it("uploads a replacement VideoStory through the existing video pipeline", async () => {

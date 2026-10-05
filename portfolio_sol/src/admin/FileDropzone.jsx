@@ -92,6 +92,9 @@ export function FileDropzone({
       pending[0].replacedStoragePath = currentItem.existing
         ? currentItem.storagePath
         : currentItem.replacedStoragePath;
+      pending[0].replacedVariantPaths = currentItem.existing
+        ? (currentItem.config?.webVariants ?? []).map((variant) => variant.path)
+        : currentItem.replacedVariantPaths;
     }
     onChange(
       usesEditableSingleActions

@@ -1,9 +1,21 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { gsap, ScrollTrigger, useGSAP } from "../../animations/gsap";
-import { portfolioMediaUrl } from "../../lib/portfolioMedia";
+import { imageSequenceKey, warmImageProps } from "../../lib/imageWarmPreload";
+import { useImageWarmPreload } from "./useImageWarmPreload";
+import { usePortfolioData } from "../../data/PortfolioDataContext";
 
 export function CatalogPair({ items }) {
   const pairRef = useRef(null);
+  const [imagePosition, setImagePosition] = useState({ key: "", index: 0 });
+  const { source: dataSource } = usePortfolioData();
+  const imageSizes = "(max-width: 48rem) 92vw, 480px";
+  const imageKey = imageSequenceKey(items.map((catalog) => catalog.pages), imageSizes);
+  useImageWarmPreload({
+    containerRef: pairRef,
+    mediaKey: imageKey,
+    activeIndex: imagePosition.key === imageKey ? imagePosition.index : 0,
+    enabled: dataSource !== "loading",
+  });
 
   useGSAP(
     (context, contextSafe) => {
@@ -41,6 +53,11 @@ export function CatalogPair({ items }) {
             anticipatePin: 1,
             invalidateOnRefresh: true,
             refreshPriority: -1,
+            onUpdate: (self) => {
+              const index = Math.min(stepCount - 1, Math.ceil(self.progress * (stepCount - 1)));
+              setImagePosition((previous) => previous.key === imageKey && previous.index === index
+                ? previous : { key: imageKey, index });
+            },
           },
         });
 
@@ -90,7 +107,7 @@ export function CatalogPair({ items }) {
               key={catalog.id}
             >
               <div className="catalog-pair__pages">
-                {catalog.pages.map((page) => (
+                {catalog.pages.map((page, index) => (
                   <figure
                     className="catalog-pair__page"
                     data-catalog-page
@@ -101,7 +118,7 @@ export function CatalogPair({ items }) {
                       decoding="async"
                       height={page.height}
                       loading="lazy"
-                      src={portfolioMediaUrl(page.src)}
+                      {...warmImageProps(page, imageSizes, index, dataSource !== "loading")}
                       width={page.width}
                     />
                   </figure>

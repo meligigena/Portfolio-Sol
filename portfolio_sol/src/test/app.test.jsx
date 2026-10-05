@@ -50,8 +50,9 @@ function mockIntersectionObserver() {
   const instances = [];
 
   class MockIntersectionObserver {
-    constructor(callback) {
+    constructor(callback, options) {
       this.callback = callback;
+      this.options = options;
       this.disconnect = vi.fn();
       this.observe = vi.fn();
       instances.push(this);
@@ -294,7 +295,7 @@ describe("portfolio routes", () => {
       screen.getByRole("heading", { level: 2, name: "Contacto" }),
     ].forEach((heading) => expect(heading).toHaveClass("network-title"));
 
-    await router.navigate("/portfolio/rambla");
+    await act(async () => router.navigate("/portfolio/rambla"));
     expect(
       await screen.findByRole(
         "heading",
@@ -342,7 +343,7 @@ describe("portfolio routes", () => {
       screen.getByRole("heading", { level: 3, name: "Sistemas Móviles" }),
     ).toHaveTextContent("Sistemas Móviles");
 
-    await router.navigate("/portfolio/sistemas-moviles");
+    await act(async () => router.navigate("/portfolio/sistemas-moviles"));
     const clientHeading = await screen.findByRole(
       "heading",
       {
@@ -792,7 +793,7 @@ describe("portfolio routes", () => {
     });
   });
 
-  it("renders Aqualand catalogs as one reusable pair in filename order", async () => {
+  it("renders Aqualand catalogs as one reusable pair and defers distant pages", async () => {
     renderRoute("/portfolio/aqualand");
 
     await screen.findByRole("heading", { level: 1, name: "Aqualand" });
@@ -806,15 +807,11 @@ describe("portfolio routes", () => {
       9,
       8,
     ]);
-    expect(
-      [...catalogs[0].querySelectorAll("img")].map((image) => image.getAttribute("src")),
-    ).toEqual(
-      Array.from(
-        { length: 9 },
-        (_, index) =>
-          portfolioMediaUrl(`aqualand/catalogos/catalogo1/${index + 1}.jpg`),
-      ),
-    );
+    expect([...catalogs[0].querySelectorAll("img")].map((image) => image.getAttribute("src"))).toEqual([
+      portfolioMediaUrl("aqualand/catalogos/catalogo1/1.jpg"),
+      portfolioMediaUrl("aqualand/catalogos/catalogo1/2.jpg"),
+      ...Array(7).fill(null),
+    ]);
   });
 
   it("keeps carousel labels outside the animated track", async () => {
@@ -897,12 +894,23 @@ describe("portfolio routes", () => {
     await screen.findByRole("heading", { level: 1, name: "Vectus" });
     const soundButton = screen.getByRole("button", { name: "Activar sonido" });
     const activeVideo = document.querySelector("[data-video-stack] video");
+    const videoObserver = observers.find((observer) =>
+      observer.observe.mock.calls.some(([target]) => target === activeVideo),
+    );
+
+    act(() => {
+      videoObserver.callback([{
+        target: activeVideo,
+        isIntersecting: true,
+        intersectionRatio: 0.8,
+      }]);
+    });
 
     fireEvent.click(soundButton);
     expect(activeVideo.muted).toBe(false);
 
     act(() => {
-      observers[0].callback([
+      videoObserver.callback([
         {
           target: activeVideo,
           isIntersecting: false,
@@ -969,7 +977,7 @@ describe("portfolio routes", () => {
     const router = renderRoute("/portfolio/aqualand");
 
     await screen.findByRole("heading", { level: 1, name: "Aqualand" });
-    await router.navigate("/portfolio/tardeo");
+    await act(async () => router.navigate("/portfolio/tardeo"));
     await screen.findByRole("heading", { level: 1, name: "Tardeo" });
 
     const videos = [...document.querySelectorAll("[data-media-row] video")];
@@ -977,6 +985,7 @@ describe("portfolio routes", () => {
 
     await waitFor(() => {
       rowObserver = observers.find((observer) =>
+        !observer.options?.rootMargin &&
         observer.observe.mock.calls.some(([target]) => target === videos[0]),
       );
       expect(rowObserver).toBeDefined();
@@ -990,6 +999,9 @@ describe("portfolio routes", () => {
     expect(play).not.toHaveBeenCalled();
 
     act(() => {
+      const warmObserver = observers.find((observer) => observer.options?.rootMargin &&
+        observer.observe.mock.calls.some(([target]) => target === videos[0]));
+      warmObserver.callback([{ target: videos[0], isIntersecting: true, intersectionRatio: 1 }]);
       rowObserver.callback(
         videos.map((target, index) => ({
           target,
@@ -1043,7 +1055,8 @@ describe("portfolio routes", () => {
     expect(audibleVideo.muted).toBe(false);
 
     act(() => {
-      observers[0].callback([
+      observers.find((observer) => !observer.options?.rootMargin &&
+        observer.observe.mock.calls.some(([target]) => target === audibleVideo)).callback([
         {
           target: audibleVideo,
           isIntersecting: false,
@@ -1085,7 +1098,7 @@ describe("portfolio routes", () => {
       /Redes Sociales|Instagram|Editorial/i,
     );
 
-    await router.navigate("/portfolio/sistemas-moviles");
+    await act(async () => router.navigate("/portfolio/sistemas-moviles"));
     await screen.findByRole("heading", { level: 1, name: "Sistemas Móviles" });
     expect(document.querySelector(".case-study__media")).not.toHaveTextContent(
       /Redes Sociales|Instagram|Editorial/i,
@@ -1214,7 +1227,7 @@ describe("portfolio routes", () => {
     expect(companionVideo.muted).toBe(true);
     expect(companionVideo).not.toHaveAttribute("autoplay");
     expect(companionVideo).toHaveAttribute("playsinline");
-    expect(companionVideo).toHaveAttribute("preload", "none");
+    expect(companionVideo).toHaveAttribute("preload", "auto");
     expect(storySection.querySelector(".video-sound-toggle")).not.toBeInTheDocument();
   });
 

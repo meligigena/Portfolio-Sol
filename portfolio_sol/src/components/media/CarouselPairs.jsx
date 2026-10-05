@@ -1,6 +1,8 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { gsap, ScrollTrigger, useGSAP } from "../../animations/gsap";
-import { portfolioMediaUrl } from "../../lib/portfolioMedia";
+import { imageSequenceKey, warmImageProps } from "../../lib/imageWarmPreload";
+import { useImageWarmPreload } from "./useImageWarmPreload";
+import { usePortfolioData } from "../../data/PortfolioDataContext";
 
 function pairItems(items) {
   return Array.from({ length: Math.ceil(items.length / 2) }, (_, index) =>
@@ -23,6 +25,16 @@ export function CarouselPairs({ items }) {
 
 function CarouselPair({ items }) {
   const pairRef = useRef(null);
+  const [imagePosition, setImagePosition] = useState({ key: "", index: 0 });
+  const { source: dataSource } = usePortfolioData();
+  const imageSizes = "(max-width: 48rem) 92vw, 512px";
+  const imageKey = imageSequenceKey(items.map((carousel) => carousel.items), imageSizes);
+  useImageWarmPreload({
+    containerRef: pairRef,
+    mediaKey: imageKey,
+    activeIndex: imagePosition.key === imageKey ? imagePosition.index : 0,
+    enabled: dataSource !== "loading",
+  });
 
   useGSAP(
     (context, contextSafe) => {
@@ -53,6 +65,11 @@ function CarouselPair({ items }) {
             end: () =>
               `+=${(stepCount - 1) * Math.max(window.innerHeight * 0.68, 440)}`,
             scrub: 0.8,
+            onUpdate: (self) => {
+              const index = Math.min(stepCount - 1, Math.ceil(self.progress * (stepCount - 1)));
+              setImagePosition((previous) => previous.key === imageKey && previous.index === index
+                ? previous : { key: imageKey, index });
+            },
             anticipatePin: 1,
             invalidateOnRefresh: true,
           },
@@ -100,7 +117,7 @@ function CarouselPair({ items }) {
             >
               <div className="project-media__carousel-window">
                 <div className="project-media__carousel-track" data-carousel-track>
-                  {carousel.items.map((item) => (
+                  {carousel.items.map((item, index) => (
                     <div
                       className="project-media__carousel-slide"
                       data-carousel-slide
@@ -111,7 +128,7 @@ function CarouselPair({ items }) {
                         decoding="async"
                         height={item.height}
                         loading="lazy"
-                        src={portfolioMediaUrl(item.src)}
+                        {...warmImageProps(item, imageSizes, index, dataSource !== "loading")}
                         width={item.width}
                       />
                     </div>

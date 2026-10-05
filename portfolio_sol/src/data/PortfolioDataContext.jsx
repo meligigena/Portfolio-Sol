@@ -16,7 +16,10 @@ export function PortfolioDataProvider({ children }) {
     clients: fallbackClients,
     aboutContent: null,
     aboutStatus: "loading",
-    source: "fallback",
+    source: import.meta.env.MODE !== "test" &&
+      import.meta.env.VITE_PORTFOLIO_DATABASE_ENABLED === "true"
+      ? "loading"
+      : "fallback",
   });
 
   useEffect(() => {
@@ -28,16 +31,17 @@ export function PortfolioDataProvider({ children }) {
     if (databaseEnabled) {
       fetchPublishedPortfolioClients()
         .then((databaseClients) => {
-          if (active && databaseClients.length > 0) {
+          if (active) {
             setState((current) => ({
               ...current,
-              clients: databaseClients,
-              source: "database",
+              clients: databaseClients.length > 0 ? databaseClients : fallbackClients,
+              source: databaseClients.length > 0 ? "database" : "fallback",
             }));
           }
         })
         .catch((error) => {
           console.error("No se pudo cargar el portfolio desde Supabase.", error);
+          if (active) setState((current) => ({ ...current, source: "fallback" }));
         });
     }
 

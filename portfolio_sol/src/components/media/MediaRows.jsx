@@ -3,27 +3,41 @@ import { SoundToggleButton } from "./SoundToggleButton";
 import { useVideoViewportVisibility } from "./useVideoViewportVisibility";
 import { claimVideoSound, VIDEO_SOUND_OWNER_EVENT } from "./videoSound";
 import { portfolioMediaUrl } from "../../lib/portfolioMedia";
+import { usePortfolioData } from "../../data/PortfolioDataContext";
+import { useVideoWarmPreload } from "./useVideoWarmPreload";
 
 export function MediaRows({ rows }) {
   const rowsRef = useRef(null);
   const ownerId = useId();
   const [activeSoundId, setActiveSoundId] = useState(null);
+  const { source: dataSource } = usePortfolioData();
+  const mediaKey = rows.flat().map((item) => `${item.id}:${item.src}`).join("|");
+  const onVisible = (video) => {
+    if (!canStart(video)) return;
+    const audioAllowed = video.dataset.audioEnabled === "true";
+    const hasSound = audioAllowed && video.dataset.stripVideo === activeSoundId;
+    video.muted = !hasSound;
+    video.play()?.catch?.(() => {});
+  };
+  const canStart = useVideoWarmPreload({
+    containerRef: rowsRef,
+    enabled: dataSource !== "loading",
+    mediaKey,
+    onPrepared: (video) => {
+      if (video.dataset.viewportVisible === "true") onVisible(video);
+    },
+  });
 
   useVideoViewportVisibility({
     containerRef: rowsRef,
-    observeKey: rows,
+    enabled: dataSource !== "loading",
+    observeKey: mediaKey,
     onHidden: (video) => {
       if (video.dataset.stripVideo === activeSoundId) {
         setActiveSoundId(null);
       }
     },
-    onVisible: (video) => {
-      const audioAllowed = video.dataset.audioEnabled === "true";
-      const hasSound = audioAllowed && video.dataset.stripVideo === activeSoundId;
-
-      video.muted = !hasSound;
-      video.play()?.catch?.(() => {});
-    },
+    onVisible,
   });
 
   useEffect(() => {

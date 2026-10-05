@@ -1,12 +1,18 @@
 import { portfolioMediaUrl } from "../../lib/portfolioMedia";
+import { responsiveImageProps } from "../../lib/responsiveImage";
 
-export function ProjectMedia({ project, index }) {
+export function ProjectMedia({ project, index, priority = false }) {
   const ratio = `${project.width} / ${project.height}`;
   const mediaKind = project.type === "story" ? "story" : project.type === "post" ? "post" : project.type;
   const usesTypeOnlyLabel =
     Boolean(project.src) && (mediaKind === "story" || mediaKind === "post");
   const source = project.src ? portfolioMediaUrl(project.src) : null;
   const poster = project.poster ? portfolioMediaUrl(project.poster) : null;
+  const imageProps = project.src
+    ? responsiveImageProps(project, project.presentation === "phone"
+      ? "(max-width: 48rem) 86vw, 340px"
+      : "(max-width: 48rem) 92vw, 700px")
+    : null;
 
   if (project.type === "video" && project.src) {
     return (
@@ -36,11 +42,12 @@ export function ProjectMedia({ project, index }) {
           <div className="project-media__phone">
             <div className="project-media__phone-screen">
               <img
-                src={source}
+                {...imageProps}
                 alt={project.alt}
                 width={project.width}
                 height={project.height}
-                loading="lazy"
+                loading={priority ? "eager" : "lazy"}
+                fetchPriority={priority ? "high" : undefined}
                 decoding="async"
               />
             </div>
@@ -57,11 +64,12 @@ export function ProjectMedia({ project, index }) {
           </div>
         ) : (
           <img
-            src={source}
+            {...imageProps}
             alt={project.alt}
             width={project.width}
             height={project.height}
-            loading="lazy"
+            loading={priority ? "eager" : "lazy"}
+            fetchPriority={priority ? "high" : undefined}
             decoding="async"
           />
         )
