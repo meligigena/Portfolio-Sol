@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createWebImageVariants } from "./imageVariants";
+import { createWebImageVariants, isStaticWebRaster } from "./imageVariants";
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe("createWebImageVariants", () => {
-  it("preserves the source and produces useful high quality WebP widths", async () => {
-    const source = new File([new Uint8Array(1000)], "original.jpg", { type: "image/jpeg" });
+  it.each(["image/jpeg", "image/png", "image/webp"])("preserves a %s source and produces useful high quality WebP widths", async (type) => {
+    const source = new File([new Uint8Array(1000)], "original.jpg", { type });
     const close = vi.fn();
     vi.stubGlobal("createImageBitmap", vi.fn(async () => ({ width: 2400, height: 1350, close })));
     const originalCreate = document.createElement.bind(document);
@@ -34,9 +34,28 @@ describe("createWebImageVariants", () => {
     expect(close).toHaveBeenCalledOnce();
   });
 
-  it("does not recompress an existing WebP", async () => {
-    const source = new File(["webp"], "ready.webp", { type: "image/webp" });
+  it("uses the same pipeline for a static WebP and skips small sources", async () => {
+    const source = new File(["RIFF0000WEBP"], "ready.webp", { type: "image/webp" });
+    const decode = vi.fn(async () => ({ width: 720, height: 900, close: vi.fn() }));
+    vi.stubGlobal("createImageBitmap", decode);
+    expect(await isStaticWebRaster(source)).toBe(true);
     expect(await createWebImageVariants(source)).toEqual([]);
+    expect(decode).toHaveBeenCalledWith(source);
+  });
+
+  it.each([
+    ["image/webp", "RIFF0000WEBPANIM0000"],
+    ["image/png", "00000000\u0000\u0000\u0000\u0000acTL0000"],
+    ["image/avif", "\u0000\u0000\u0000\u0010ftypavis0000"],
+  ])("preserves animated %s without decoding it", async (type, contents) => {
+    const decode = vi.fn();
+    vi.stubGlobal("createImageBitmap", decode);
+    expect(await createWebImageVariants(new File([contents], "animation", { type }))).toEqual([]);
+    expect(decode).not.toHaveBeenCalled();
+  });
+
+  it("skips SVG", async () => {
+    expect(await createWebImageVariants(new File(["<svg/>"], "logo.svg", { type: "image/svg+xml" }))).toEqual([]);
   });
 
   it("keeps animated GIF uploads from becoming static WebP images", async () => {

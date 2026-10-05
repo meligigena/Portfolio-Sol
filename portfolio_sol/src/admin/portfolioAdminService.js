@@ -81,6 +81,42 @@ export function variantPath(originalPath, width) {
   return `${originalPath.replace(/\.[^/.]+$/, "")}-web-${width}.webp`;
 }
 
+async function uploadPublicMedia(storage, job, uploadedPaths) {
+  const { error } = await storage.upload(job.path, job.file, {
+    cacheControl: "31536000", contentType: job.file.type, upsert: false,
+  });
+  if (error) throw new Error(`Falló la subida de ${job.file.name}: ${error.message}`);
+  uploadedPaths.push(job.path);
+  // Logos are direct client references, not responsive media items.
+  if (job.id === "logo" || !job.file.type.startsWith("image/")) return job.path;
+
+  const webVariants = [];
+  try {
+    const variants = await createWebImageVariants(job.file);
+    for (const variant of variants) {
+      const path = variantPath(job.path, variant.width);
+      const { error: variantError } = await storage.upload(path, variant.blob, {
+        cacheControl: "31536000", contentType: "image/webp", upsert: false,
+      });
+      if (variantError) throw variantError;
+      uploadedPaths.push(path);
+      webVariants.push({ width: variant.width, path });
+    }
+  } catch (optimizationError) {
+    console.warn(`Web optimization failed for ${job.file.name}; keeping the original.`, optimizationError);
+    const partialPaths = webVariants.map((variant) => variant.path);
+    try {
+      await removeUploaded(storage, partialPaths);
+      for (const path of partialPaths) uploadedPaths.splice(uploadedPaths.indexOf(path), 1);
+    } catch (cleanupError) {
+      // Keep these paths tracked so a later save failure can retry rollback.
+      console.warn("Partial web variant cleanup failed.", cleanupError);
+    }
+    return { original: job.path, webVariants: [] };
+  }
+  return { original: job.path, webVariants };
+}
+
 export function assertScopedPaths(paths, prefix) {
   const safePrefix = `${prefix}/`;
   if (paths.some((path) => !path.startsWith(safePrefix))) {
@@ -249,37 +285,7 @@ export function createPortfolioAdminService(
             category: job.category,
             fileName: job.file.name,
           });
-          const { error } = await storage.upload(job.path, job.file, {
-            cacheControl: "31536000",
-            contentType: job.file.type,
-            upsert: false,
-          });
-          if (error) throw new Error(`Falló la subida de ${job.file.name}: ${error.message}`);
-          uploadedPaths.push(job.path);
-          if (job.id === "logo" || !job.file.type.startsWith("image/")) {
-            resolvedPaths.set(job.id, job.path);
-            continue;
-          }
-
-          let variants = [];
-          try {
-            variants = await createWebImageVariants(job.file);
-          } catch (optimizationError) {
-            console.warn(`Web optimization failed for ${job.file.name}.`, optimizationError);
-          }
-          const webVariants = [];
-          for (const variant of variants) {
-            const path = variantPath(job.path, variant.width);
-            const { error: variantError } = await storage.upload(path, variant.blob, {
-              cacheControl: "31536000",
-              contentType: "image/webp",
-              upsert: false,
-            });
-            if (variantError) throw new Error(`Falló la variante web de ${job.file.name}: ${variantError.message}`);
-            uploadedPaths.push(path);
-            webVariants.push({ width: variant.width, path });
-          }
-          resolvedPaths.set(job.id, { original: job.path, webVariants });
+          resolvedPaths.set(job.id, await uploadPublicMedia(storage, job, uploadedPaths));
         }
 
         const payload = buildClientPayload(

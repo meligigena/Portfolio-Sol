@@ -131,8 +131,7 @@ Destino: `https://tihojwuhzdephqwuqbzq.supabase.co`, bucket `portfolio-media`. L
 
 ## Archivos del piloto y entrega
 
-- `scripts/aqualand-web-variants.mjs`: inventario, generación mediante el Admin, publicación comprobada e integridad, exclusivamente Aqualand Stories/Carruseles. Modos `inventory`, `generate`, `apply`, `verify`; necesita Vite en 5173, Chromium existente y las variables locales de mantenimiento existentes.
-- `scripts/aqualand-web-variants.test.mjs`: límites de cliente/sección/rutas y metadata, sin servicios remotos.
+- El script y test del piloto se generalizaron como `scripts/portfolio-web-variants.mjs` y `scripts/portfolio-web-variants.test.mjs`. El mantenimiento actual usa `plan`, `apply` y `verify` para todos los clientes; ver [WEB_VARIANTS_BACKFILL.md](WEB_VARIANTS_BACKFILL.md). Los resultados y artefactos de este piloto se conservan como evidencia histórica.
 - `src/admin/portfolioAdminService.js`: únicamente exportar `variantPath`; conservados todos los cambios previos del usuario.
 - `AQUALAND_BACKFILL.md`: este informe. Evidencia, originales de lectura, variantes locales y scripts de navegador en `output/playwright/aqualand-backfill/` (ignorado por Git).
 
