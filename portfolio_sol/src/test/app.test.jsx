@@ -155,7 +155,34 @@ describe("portfolio routes", () => {
     expect(
       screen.getByRole("heading", { level: 2, name: "Contacto" }),
     ).toBeInTheDocument();
+    expect(document.querySelectorAll(".portfolio-footer")).toHaveLength(1);
+    expect(document.querySelector("#contacto").lastElementChild).toHaveClass(
+      "portfolio-footer",
+    );
   });
+
+  it.each(["rambla", "aqualand", "tardeo", "el-tori"])(
+    "renders the shared footer after the %s case study",
+    async (slug) => {
+      renderRoute(`/portfolio/${slug}`);
+      const footer = await screen.findByRole("contentinfo");
+      const credit = footer.querySelector(".site-credit");
+      const link = screen.getByRole("link", { name: "LinkedIn" });
+
+      expect(document.querySelectorAll(".portfolio-footer")).toHaveLength(1);
+      expect(document.querySelector("#main-content").nextElementSibling).toBe(footer);
+      expect(footer.querySelector(".portfolio-footer__identity")).toHaveTextContent(
+        "SOL FANARAPORTFOLIO / 2026",
+      );
+      expect(credit).toHaveTextContent("Desarrollado por Melina Gigena · LinkedIn");
+      expect(link).toHaveAttribute(
+        "href",
+        "https://www.linkedin.com/in/melina-gigena-560828338",
+      );
+      expect(link).toHaveAttribute("target", "_blank");
+      expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    },
+  );
 
   it("keeps the hero title hidden until the Network font is ready", async () => {
     let resolveFont;
@@ -923,6 +950,7 @@ describe("portfolio routes", () => {
     fireEvent.click(editionTwo);
 
     expect(editionTwo).toHaveAttribute("aria-selected", "true");
+    expect(document.querySelectorAll(".portfolio-footer")).toHaveLength(1);
     expect(screen.getByText("Próximamente")).toBeInTheDocument();
     expect(document.querySelector("[data-media-row]")).not.toBeInTheDocument();
     expect(document.querySelector("[data-story-device]")).not.toBeInTheDocument();

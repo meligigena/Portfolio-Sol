@@ -1,5 +1,6 @@
 import { useContactReveal } from "../animations/useSectionReveal";
 import { NetworkTitle } from "../components/typography/NetworkTitle";
+import { PortfolioFooter } from "../components/PortfolioFooter";
 import { contact } from "../data/contact";
 
 export function Contact() {
@@ -83,10 +84,7 @@ export function Contact() {
         </a>
       </div>
 
-      <footer className="contact__footer">
-        <span>SOL FANARA</span>
-        <span>PORTFOLIO / 2026</span>
-      </footer>
+      <PortfolioFooter />
     </section>
   );
 }

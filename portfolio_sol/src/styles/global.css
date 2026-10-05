@@ -54,6 +54,52 @@ a {
   padding: var(--page-gutter);
 }
 
+.portfolio-footer {
+  padding: clamp(3rem, 7vw, 6rem) var(--page-gutter) 0;
+  background: var(--color-wine-deep);
+  color: var(--color-paper);
+}
+
+.contact .portfolio-footer {
+  padding: 0;
+}
+
+.portfolio-footer__identity {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid currentColor;
+  padding-bottom: 0.6rem;
+  font-family: var(--font-utility);
+  font-size: clamp(0.66rem, 0.75vw, 0.8rem);
+  letter-spacing: 0.09em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.site-credit {
+  margin: 1rem calc(var(--page-gutter) * -1) 0;
+  padding: 0.75rem var(--page-gutter) clamp(1.5rem, 3vw, 2.25rem);
+  background: var(--color-wine-deep);
+  color: var(--color-paper);
+  font-family: var(--font-profile);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.site-credit a {
+  color: inherit;
+  opacity: 0.8;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.site-credit a:hover,
+.site-credit a:focus-visible {
+  opacity: 1;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

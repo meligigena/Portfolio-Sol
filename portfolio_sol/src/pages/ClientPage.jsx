@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useCaseStudyMotion } from "../animations/useCaseStudyMotion";
 import { ProjectMedia } from "../components/media/ProjectMedia";
+import { PortfolioFooter } from "../components/PortfolioFooter";
 import { NetworkTitle } from "../components/typography/NetworkTitle";
 import { usePortfolioData } from "../data/PortfolioDataContext";
 import {
@@ -42,7 +43,8 @@ function ClientCaseStudy({ client, clients }) {
   const { previousClient, nextClient } = getAdjacentClients(clients, client.slug);
 
   return (
-    <main ref={pageRef} id="main-content" className="case-study">
+    <>
+      <main ref={pageRef} id="main-content" className="case-study">
       <nav className="case-study__nav" aria-label="Navegación del proyecto">
         <Link className="case-study__back-link" to="/#portfolio">
           ← Volver al portfolio
@@ -103,7 +105,9 @@ function ClientCaseStudy({ client, clients }) {
           <span className="case-study__pagination-name">{nextClient.name}</span>
         </Link>
       </nav>
-    </main>
+      </main>
+      <PortfolioFooter />
+    </>
   );
 }
 
