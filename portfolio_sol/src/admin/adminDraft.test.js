@@ -171,6 +171,75 @@ describe("admin CRUD payloads", () => {
     ]);
   });
 
+  it("persists the canonical structure for every standard section in a new edition", () => {
+    const edition = createPendingEdition();
+    const resolvedPaths = new Map();
+    const sectionFixtures = [
+      ["postGrid", "post", "post.jpg", "image/jpeg"],
+      ["storySequence", "story", "story.jpg", "image/jpeg"],
+      ["videoStory", "video", "video-story.mp4", "video/mp4"],
+      ["videoStack", "video", "video.mp4", "video/mp4"],
+    ];
+
+    sectionFixtures.forEach(([type, mediaKind, name, mimeType]) => {
+      const section = createPendingEditionSection(type);
+      const item = createPendingItem(new File([name], name, { type: mimeType }), mediaKind);
+      section.items.push(item);
+      resolvedPaths.set(item.tempId, `festival/ediciones/edicion-1/${name}`);
+      edition.sections.push(section);
+    });
+
+    [
+      ["carouselPairs", "carousel", "carouselSlide", "slide.jpg"],
+      ["catalogPair", "catalog", "catalogPage", "page.jpg"],
+    ].forEach(([type, groupKind, mediaKind, name]) => {
+      const section = createPendingEditionSection(type);
+      const group = createPendingGroup(groupKind, 0);
+      const item = createPendingItem(
+        new File([name], name, { type: "image/jpeg" }),
+        mediaKind,
+      );
+      group.items.push(item);
+      section.groups.push(group);
+      resolvedPaths.set(item.tempId, `festival/ediciones/edicion-1/${name}`);
+      edition.sections.push(section);
+    });
+
+    const payload = buildClientPayload({
+      ...createEmptyAdminDraft(),
+      name: "Festival",
+      year: "2026",
+      discipline: "Eventos",
+      existingLogoPath: "festival/logo.jpg",
+      usesEditions: true,
+      editionDrafts: [edition],
+    }, resolvedPaths);
+
+    expect(payload.editions[0].sections.map((section) => section.section_type)).toEqual([
+      "postGrid",
+      "storySequence",
+      "videoStory",
+      "videoStack",
+      "carouselPairs",
+      "catalogPair",
+    ]);
+    expect(payload.editions[0].sections.map((section) => section.config)).toEqual([
+      {},
+      { presentation: "singlePhone" },
+      { presentation: "phone" },
+      {},
+      {},
+      {},
+    ]);
+    expect(
+      payload.editions[0].sections
+        .filter((section) => section.groups.length > 0)
+        .map((section) => section.groups[0].group_kind),
+    ).toEqual(["carousel", "catalog"]);
+    expect(payload.editions[0].sections[0].items[0].media_kind).toBe("post");
+    expect(payload.editions[0].sections[2].items).toHaveLength(1);
+  });
+
   it("does not hydrate persisted standard or custom sections without renderable media", () => {
     const draft = clientToAdminDraft({
       id: "client-id",

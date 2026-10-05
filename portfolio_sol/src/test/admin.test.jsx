@@ -661,6 +661,47 @@ describe("private portfolio admin", () => {
     expect(screen.getAllByRole("tab")).toHaveLength(5);
   });
 
+  it("feeds the live edition count to an equal-width N-column grid", async () => {
+    const user = { id: "admin-user" };
+    const service = createService({
+      getSession: vi.fn().mockResolvedValue({ user }),
+      isAdmin: vi.fn().mockResolvedValue(true),
+    });
+    render(<AdminPage service={service} />);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: /adir nuevo cliente/i }),
+    );
+    fireEvent.click(screen.getByRole("checkbox", { name: "Utilizar ediciones" }));
+
+    const tablist = screen.getByRole("tablist");
+    const addEdition = screen.getByRole("button", { name: /Agregar edici/i });
+    const expectColumns = (count) => {
+      expect(screen.getAllByRole("tab")).toHaveLength(count);
+      expect(tablist.style.getPropertyValue("--edition-count")).toBe(String(count));
+    };
+
+    expectColumns(1);
+    fireEvent.click(addEdition);
+    expectColumns(2);
+    fireEvent.click(addEdition);
+    expectColumns(3);
+    fireEvent.click(screen.getByRole("button", { name: /Descartar edici/i }));
+    expectColumns(2);
+
+    for (let count = 3; count <= 6; count += 1) {
+      fireEvent.click(addEdition);
+    }
+    expectColumns(6);
+
+    expect(addEdition.closest(".admin-edition-tabs")).toBeNull();
+    const styles = readFileSync("src/styles/admin.css", "utf8");
+    expect(styles).toMatch(
+      /grid-template-columns:\s*repeat\(var\(--edition-count\),\s*minmax\(0,\s*1fr\)\)/,
+    );
+    expect(styles).not.toMatch(/\.two-editions|\.three-editions|\.four-editions/);
+  });
+
   it("reconstructs six persisted editions in sort order and isolates their content", async () => {
     const user = { id: "admin-user" };
     const festival = {

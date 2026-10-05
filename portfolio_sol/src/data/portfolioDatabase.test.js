@@ -5,6 +5,146 @@ import {
 } from "./portfolioDatabase";
 
 describe("portfolio database mapping", () => {
+  it("maps Tardeo Edition 2 Admin posts to the canonical public post renderer contract", () => {
+    const [client] = mapPortfolioRowsToClients([{
+      id: "tardeo-id",
+      slug: "tardeo",
+      storage_prefix: "tardeo",
+      name: "Tardeo",
+      year: "2026",
+      disciplines: ["Eventos/Entretenimiento"],
+      logo_path: "tardeo/logo.jpeg",
+      sort_order: 2,
+      published: true,
+      config: {},
+      portfolio_sections: [],
+      portfolio_editions: [{
+        id: "edition-2-id",
+        edition_key: "edicion-2",
+        label: "EdiciÃ³n 2",
+        sort_order: 1,
+        coming_soon: false,
+        config: {},
+        portfolio_sections: [{
+          id: "edition-2-posts",
+          edition_id: "edition-2-id",
+          section_type: "postGrid",
+          title: "Posts",
+          sort_order: 0,
+          config: {},
+          portfolio_media_groups: [],
+          portfolio_media_items: [{
+            id: "edition-2-post",
+            media_kind: "post",
+            storage_path: "tardeo/ediciones/edicion-2/posts/one.jpg",
+            title: "Post 1",
+            alt_text: "Post de Tardeo EdiciÃ³n 2",
+            mime_type: "image/jpeg",
+            width: 1080,
+            height: 1350,
+            sort_order: 0,
+            audio_enabled: null,
+            config: { presentation: "raw" },
+          }],
+        }],
+      }],
+    }]);
+
+    expect(client.editions[0].content).toEqual([
+      expect.objectContaining({
+        type: "postGrid",
+        config: {},
+        items: [expect.objectContaining({
+          type: "post",
+          src: "tardeo/ediciones/edicion-2/posts/one.jpg",
+        })],
+      }),
+    ]);
+  });
+
+  it("hydrates all standard section models inside an edition without client-specific rules", () => {
+    const directSection = (type, mediaKind, extension, config = {}) => ({
+      id: `${type}-section`,
+      edition_id: "edition-id",
+      section_type: type,
+      title: type,
+      sort_order: 0,
+      config,
+      portfolio_media_groups: [],
+      portfolio_media_items: [{
+        id: `${type}-item`,
+        media_kind: mediaKind,
+        storage_path: `generic/${type}/one.${extension}`,
+        sort_order: 0,
+        audio_enabled: mediaKind === "video" ? false : null,
+        config,
+      }],
+    });
+    const groupedSection = (type, groupKind, mediaKind) => ({
+      id: `${type}-section`,
+      edition_id: "edition-id",
+      section_type: type,
+      title: type,
+      sort_order: 0,
+      config: {},
+      portfolio_media_items: [],
+      portfolio_media_groups: [{
+        id: `${type}-group`,
+        group_kind: groupKind,
+        label: groupKind,
+        sort_order: 0,
+        config: {},
+        portfolio_media_items: [{
+          id: `${type}-item`,
+          media_kind: mediaKind,
+          storage_path: `generic/${type}/one.jpg`,
+          sort_order: 0,
+          audio_enabled: null,
+          config: {},
+        }],
+      }],
+    });
+    const [client] = mapPortfolioRowsToClients([{
+      id: "generic-client",
+      slug: "generic",
+      storage_prefix: "generic",
+      name: "Generic",
+      year: "2027",
+      disciplines: ["Design"],
+      logo_path: "generic/logo.jpg",
+      sort_order: 0,
+      published: true,
+      config: {},
+      portfolio_sections: [],
+      portfolio_editions: [{
+        id: "edition-id",
+        edition_key: "edition-1",
+        label: "Edition 1",
+        sort_order: 0,
+        config: {},
+        portfolio_sections: [
+          directSection("postGrid", "post", "jpg"),
+          directSection("storySequence", "story", "jpg", { presentation: "singlePhone" }),
+          directSection("videoStory", "video", "mp4", { presentation: "phone" }),
+          groupedSection("carouselPairs", "carousel", "carouselSlide"),
+          directSection("videoStack", "video", "mp4"),
+          groupedSection("catalogPair", "catalog", "catalogPage"),
+        ].map((section, index) => ({ ...section, sort_order: index })),
+      }],
+    }]);
+
+    expect(client.editions[0].content.map((block) => block.type)).toEqual([
+      "postGrid",
+      "storySequence",
+      "videoStory",
+      "carouselPairs",
+      "videoStack",
+      "catalogPair",
+    ]);
+    expect(client.editions[0].content[3].items[0].items[0].type).toBe("carouselSlide");
+    expect(client.editions[0].content[5].items[0].pages[0].type).toBe("catalogPage");
+  });
+
   it("maps the canonical VideoStory section for the public renderer", () => {
     const [client] = mapPortfolioRowsToClients([{
       id: "video-story-client",

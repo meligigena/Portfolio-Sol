@@ -1,8 +1,21 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  CLIENT_ROUTE_TRANSITION,
   MOBILE_CASE_STUDY_TITLE_TWEEN,
   scrollCaseStudyToTop,
 } from "./useCaseStudyMotion";
+
+describe("client route transition", () => {
+  it("uses a short opacity-only entrance for every client", () => {
+    expect(CLIENT_ROUTE_TRANSITION).toEqual({
+      autoAlpha: 0,
+      duration: 0.32,
+      ease: "power2.out",
+    });
+    expect(CLIENT_ROUTE_TRANSITION).not.toHaveProperty("x");
+    expect(CLIENT_ROUTE_TRANSITION).not.toHaveProperty("y");
+  });
+});
 
 describe("case study mobile title animation", () => {
   it("reveals the title without transforming the text layer", () => {

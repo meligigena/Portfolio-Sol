@@ -4,6 +4,7 @@ import {
   hasRenderableEditionContent,
   hasRenderableProjectContent,
 } from "./projectContent";
+import { getStandardSectionDefinitionByType } from "../sections/sectionRegistry";
 
 const PORTFOLIO_SELECT = `
   id,
@@ -101,7 +102,7 @@ function mapGroup(group, sectionType) {
     .map(mapMediaItem)
     .filter((item) => Boolean(item.src));
 
-  if (sectionType === "catalogPair") {
+  if (getStandardSectionDefinitionByType(sectionType)?.public.renderer === "catalogPair") {
     return { id: group.id, label: group.label, pages: items };
   }
 
@@ -109,6 +110,7 @@ function mapGroup(group, sectionType) {
 }
 
 function mapSection(section) {
+  const definition = getStandardSectionDefinitionByType(section.section_type);
   const directItems = sortByOrder(section.portfolio_media_items)
     .map(mapMediaItem)
     .filter((item) => Boolean(item.src));
@@ -123,7 +125,7 @@ function mapSection(section) {
     ...section.config,
   };
 
-  if (section.section_type === "mediaRows") {
+  if (definition?.public.renderer === "mediaRows") {
     block.rows = groups.map((group) =>
       sortByOrder(group.portfolio_media_items)
         .map(mapMediaItem)
@@ -134,10 +136,7 @@ function mapSection(section) {
       label: group.label,
       config: group.config ?? {},
     }));
-  } else if (
-    section.section_type === "carouselPairs" ||
-    section.section_type === "catalogPair"
-  ) {
+  } else if (definition?.dataModel === "grouped") {
     block.items = groups.map((group) => mapGroup(group, section.section_type));
   } else {
     block.items = directItems;
@@ -161,12 +160,13 @@ function mapSections(sections) {
 
 function flattenProjects(blocks) {
   return blocks.flatMap((block) => {
-    if (block.type === "mediaRows") return block.rows.flat();
-    if (block.type === "carouselPairs") {
-      return block.items.flatMap((group) => group.items);
-    }
-    if (block.type === "catalogPair") {
+    const definition = getStandardSectionDefinitionByType(block.type);
+    if (definition?.public.renderer === "mediaRows") return block.rows.flat();
+    if (definition?.public.renderer === "catalogPair") {
       return block.items.flatMap((group) => group.pages);
+    }
+    if (definition?.dataModel === "grouped") {
+      return block.items.flatMap((group) => group.items);
     }
     return [block.companionVideo, ...(block.items ?? [])].filter(Boolean);
   });

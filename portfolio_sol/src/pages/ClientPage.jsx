@@ -1,14 +1,7 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useCaseStudyMotion } from "../animations/useCaseStudyMotion";
-import { CarouselPairs } from "../components/media/CarouselPairs";
-import { CatalogPair } from "../components/media/CatalogPair";
-import { MediaRows } from "../components/media/MediaRows";
 import { ProjectMedia } from "../components/media/ProjectMedia";
-import { ResponsiveBrandBanner } from "../components/media/ResponsiveBrandBanner";
-import { StorySequence } from "../components/media/StorySequence";
-import { VideoStack } from "../components/media/VideoStack";
-import { DisplayHeading } from "../components/typography/DisplayHeading";
 import { NetworkTitle } from "../components/typography/NetworkTitle";
 import { usePortfolioData } from "../data/PortfolioDataContext";
 import {
@@ -19,6 +12,10 @@ import {
 import { NotFoundPage } from "./NotFoundPage";
 import { getAdjacentClients } from "../data/clientOrder";
 import { combinePhoneSections } from "./phoneSectionLayout";
+import {
+  PublicContentBlock,
+  SequenceSection,
+} from "../sections/PublicContentBlock";
 
 export function ClientPage() {
   const { clientSlug } = useParams();
@@ -112,178 +109,12 @@ function ClientCaseStudy({ client, clients }) {
 
 function ContentBlocks({ blocks = [] }) {
   return combinePhoneSections(blocks).map((block, blockIndex) => (
-    <ContentBlock block={block} blockIndex={blockIndex} key={block.id ?? `${block.type}-${blockIndex}`} />
+    <PublicContentBlock
+      block={block}
+      blockIndex={blockIndex}
+      key={block.id ?? `${block.type}-${blockIndex}`}
+    />
   ));
-}
-
-function ContentBlock({ block, blockIndex }) {
-  const titleId = `${block.type}-${blockIndex}`;
-
-  if (block.type === "phoneStories") {
-    return (
-      <SequenceSection block={block} className="case-study__stories" titleId={titleId}>
-        <StorySequence
-          projects={block.stories.items ?? []}
-          videoStory={block.videoStory.items?.[0] ?? null}
-        />
-      </SequenceSection>
-    );
-  }
-
-  if (block.type === "videoStory") {
-    return (
-      <SequenceSection block={block} className="case-study__stories" titleId={titleId}>
-        <StorySequence projects={[]} videoStory={block.items?.[0] ?? null} />
-      </SequenceSection>
-    );
-  }
-
-  if (block.type === "storySequence") {
-    const storyItems = block.items ?? [];
-    const hasRealStories = storyItems.some((item) => item.src);
-    const hasStoryPresentation =
-      hasRealStories || Boolean(block.companionVideo?.src);
-
-    return (
-      <SequenceSection block={block} className="case-study__stories" titleId={titleId}>
-        {hasStoryPresentation ? (
-          <StorySequence
-            projects={storyItems}
-            videoStory={block.companionVideo}
-          />
-        ) : (
-          <div className="case-study__story-flow">
-            {storyItems.map((project, index) => (
-              <ProjectMedia project={project} index={index} key={project.id} />
-            ))}
-          </div>
-        )}
-      </SequenceSection>
-    );
-  }
-
-  if (block.type === "postGrid") {
-    const postPairs = Array.from(
-      { length: Math.ceil(block.items.length / 2) },
-      (_, pairIndex) => block.items.slice(pairIndex * 2, pairIndex * 2 + 2),
-    );
-
-    return (
-      <SequenceSection block={block} className="case-study__posts" titleId={titleId}>
-        <div className="case-study__feed">
-          {postPairs.map((pair, pairIndex) => (
-            <div
-              className={`case-study__post-pair${pair.length === 1 ? " is-single" : ""}`}
-              data-feed-block="postPair"
-              data-post-pair
-              key={pair.map((project) => project.id).join("-")}
-            >
-              {pair.map((project, itemIndex) => (
-                <ProjectMedia
-                  project={project}
-                  index={pairIndex * 2 + itemIndex}
-                  key={project.id}
-                />
-              ))}
-            </div>
-          ))}
-        </div>
-      </SequenceSection>
-    );
-  }
-
-  if (block.type === "carouselPairs") {
-    return (
-      <SequenceSection block={block} className="case-study__carousels" titleId={titleId}>
-        <CarouselPairs items={block.items} />
-      </SequenceSection>
-    );
-  }
-
-  if (block.type === "videoStack") {
-    return (
-      <SequenceSection block={block} className="case-study__videos" titleId={titleId}>
-        <VideoStack items={block.items} />
-      </SequenceSection>
-    );
-  }
-
-  if (block.type === "catalogPair") {
-    return (
-      <SequenceSection block={block} className="case-study__catalogs" titleId={titleId}>
-        <CatalogPair items={block.items} />
-      </SequenceSection>
-    );
-  }
-
-  if (block.type === "mediaRows") {
-    return (
-      <SequenceSection
-        block={block}
-        className="case-study__posts case-study__strip-posts"
-        titleId={titleId}
-      >
-        <MediaRows rows={block.rows} />
-      </SequenceSection>
-    );
-  }
-
-  if (block.type === "banners") {
-    return (
-      <SequenceSection
-        block={block}
-        className="case-study__custom-media"
-        titleId={titleId}
-      >
-        <ResponsiveBrandBanner
-          items={block.items}
-          presentation={block.presentation}
-        />
-      </SequenceSection>
-    );
-  }
-
-  if (block.type === "customMedia") {
-    const hasResponsivePair =
-      block.presentation === "responsiveBanner" &&
-      block.items.some((item) => item.viewport === "desktop") &&
-      block.items.some((item) => item.viewport === "mobile");
-
-    return (
-      <SequenceSection
-        block={block}
-        className="case-study__custom-media"
-        titleId={titleId}
-      >
-        {hasResponsivePair ? (
-          <ResponsiveBrandBanner
-            items={block.items}
-            presentation={block.presentation}
-          />
-        ) : (
-          <div className="case-study__custom-media-grid">
-            {block.items.map((project, index) => (
-              <ProjectMedia project={project} index={index} key={project.id} />
-            ))}
-          </div>
-        )}
-      </SequenceSection>
-    );
-  }
-
-  return null;
-}
-
-function SequenceSection({ block, children, className, titleId }) {
-  return (
-    <section
-      className={`case-study__sequence ${className}`}
-      aria-labelledby={titleId}
-    >
-      <SequenceHeader block={block} titleId={titleId} />
-      {children}
-    </section>
-  );
 }
 
 function LegacyContent({ projects }) {
@@ -348,17 +179,4 @@ function EditionContent({ edition }) {
   }
 
   return <ContentBlocks blocks={edition.content} />;
-}
-
-function SequenceHeader({ block, titleId }) {
-  return (
-    <header className="case-study__sequence-header">
-      <DisplayHeading
-        as="h2"
-        className="case-study__sequence-title"
-        id={titleId}
-        text={block.title}
-      />
-    </header>
-  );
 }

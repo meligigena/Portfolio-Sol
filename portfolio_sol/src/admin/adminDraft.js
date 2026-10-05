@@ -145,6 +145,7 @@ function groupDraft(group, kind) {
 }
 
 function editionSectionDraft(block) {
+  const definition = getSectionDefinitionByType(block.type);
   const base = {
     id: block.id ?? null,
     tempId: block.id ? null : draftId("edition-section"),
@@ -172,9 +173,9 @@ function editionSectionDraft(block) {
       config: block.rowGroups?.[index]?.config ?? {},
       items: items.map(existingItem),
     }));
-  } else if (block.type === "carouselPairs" || block.type === "catalogPair") {
+  } else if (definition?.dataModel === "grouped") {
     base.groups = (block.items ?? []).map((group) =>
-      groupDraft(group, block.type === "catalogPair" ? "catalog" : "carousel"),
+      groupDraft(group, definition.groupKind),
     );
     base.items = [];
   }
@@ -486,7 +487,7 @@ function directSection(type, title, items, resolvedPaths, config = {}, maxItems)
   return { section_type: type, title, config, items: serializedItems, groups: [] };
 }
 
-function groupedSection(type, title, kind, groups, resolvedPaths) {
+function groupedSection(type, title, kind, groups, resolvedPaths, config = {}) {
   const serializedGroups = active(groups)
     .map((group) => ({
       group_kind: kind,
@@ -496,7 +497,7 @@ function groupedSection(type, title, kind, groups, resolvedPaths) {
     }))
     .filter((group) => group.items.length > 0);
   if (serializedGroups.length === 0) return null;
-  return { section_type: type, title, config: {}, items: [], groups: serializedGroups };
+  return { section_type: type, title, config, items: [], groups: serializedGroups };
 }
 
 function originalText(current, original) {
@@ -504,16 +505,11 @@ function originalText(current, original) {
 }
 
 function serializeEditionSection(section, resolvedPaths) {
+  const definition = getSectionDefinitionByType(section.type);
   const groups = active(section.groups ?? [])
     .map((group) => ({
       id: group.id ?? undefined,
-      group_kind:
-        group.kind ??
-        (section.type === "mediaRows"
-          ? "media_row"
-          : section.type === "catalogPair"
-            ? "catalog"
-            : "carousel"),
+      group_kind: group.kind ?? definition?.groupKind ?? "carousel",
       label: group.label,
       config: group.config ?? {},
       items: active(group.items).map((item) => serializeItem(item, resolvedPaths)),
@@ -522,7 +518,6 @@ function serializeEditionSection(section, resolvedPaths) {
   const directItems = active(section.items ?? []).map((item) =>
     serializeItem(item, resolvedPaths),
   );
-  const definition = getSectionDefinitionByType(section.type);
   if (definition?.maxItems && directItems.length > definition.maxItems) {
     throw new Error(`${definition.label} admite un solo video.`);
   }
@@ -546,61 +541,41 @@ export function buildClientPayload(
   { changedOnly = false } = {},
 ) {
   const storyConfig = draft.sectionConfig.storySequence ?? {};
-  const sectionsByKey = {
-    stories: directSection(
-      "storySequence",
-      SECTION_TITLES.stories,
-      draft.stories,
-      resolvedPaths,
-      storyConfig.presentation
-        ? { presentation: storyConfig.presentation }
-        : { presentation: "singlePhone" },
-    ),
-    videoStory: directSection(
-      "videoStory",
-      SECTION_TITLES.videoStory,
-      draft.videoStory ?? [],
-      resolvedPaths,
-      { presentation: "phone" },
-      1,
-    ),
-    posts: directSection(
-      "postGrid",
-      SECTION_TITLES.posts,
-      draft.posts,
-      resolvedPaths,
-    ),
-    carousels: groupedSection(
-      "carouselPairs",
-      SECTION_TITLES.carousels,
-      "carousel",
-      draft.carousels,
-      resolvedPaths,
-    ),
-    videos: directSection(
-      "videoStack",
-      SECTION_TITLES.videos,
-      draft.videos,
-      resolvedPaths,
-    ),
-    catalogs: groupedSection(
-      "catalogPair",
-      SECTION_TITLES.catalogs,
-      "catalog",
-      draft.catalogs,
-      resolvedPaths,
-    ),
-    banners: directSection(
-      "banners",
-      originalText(
-        draft.bannerTitle?.trim() || SECTION_TITLES.banners,
-        draft.originalBannerTitle,
-      ),
-      draft.banners,
-      resolvedPaths,
-      { presentation: "responsiveBanner" },
-    ),
-  };
+  const sectionsByKey = Object.fromEntries(
+    ADMIN_SECTION_DEFINITIONS
+      .filter((definition) => definition.key && definition.contexts.includes("root"))
+      .map((definition) => {
+        const title = definition.key === "banners"
+          ? originalText(
+              draft.bannerTitle?.trim() || definition.label,
+              draft.originalBannerTitle,
+            )
+          : definition.label;
+        const config = {
+          ...(definition.initialConfig ?? {}),
+          ...(definition.type === "storySequence" ? storyConfig : {}),
+        };
+        const section = definition.dataModel === "grouped"
+          ? groupedSection(
+              definition.type,
+              title,
+              definition.groupKind,
+              draft[definition.draftField] ?? [],
+              resolvedPaths,
+              config,
+            )
+          : directSection(
+              definition.type,
+              title,
+              draft[definition.draftField] ?? [],
+              resolvedPaths,
+              config,
+              definition.maxItems,
+            );
+
+        return [definition.key, section];
+      }),
+  );
   const customByKey = new Map(
     (draft.customSections ?? []).map((section) => [
       `custom:${section.id}`,

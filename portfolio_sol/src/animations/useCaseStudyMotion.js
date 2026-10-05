@@ -8,6 +8,12 @@ export const MOBILE_CASE_STUDY_TITLE_TWEEN = {
   clearProps: "opacity,visibility,transform",
 };
 
+export const CLIENT_ROUTE_TRANSITION = {
+  autoAlpha: 0,
+  duration: 0.32,
+  ease: "power2.out",
+};
+
 export function scrollCaseStudyToTop() {
   const scrollOptions = { top: 0, left: 0, behavior: "auto" };
 
@@ -69,6 +75,8 @@ export function useCaseStudyMotion(clientSlug) {
       );
 
       media.add("(prefers-reduced-motion: no-preference)", () => {
+        gsap.from(pageRef.current, CLIENT_ROUTE_TRANSITION);
+
         gsap.utils.toArray('.project-media:not([data-media-kind="story"]):not([data-media-kind="post"])').forEach((mediaItem) => {
           gsap.from(mediaItem, {
             autoAlpha: 0,
@@ -84,72 +92,6 @@ export function useCaseStudyMotion(clientSlug) {
         });
 
       });
-
-      media.add(
-        "(min-width: 64rem) and (prefers-reduced-motion: no-preference)",
-        () => {
-          gsap.utils.toArray("[data-post-pair]").forEach((pair) => {
-            const pairPosts = gsap.utils.toArray(pair.querySelectorAll('[data-media-kind="post"]'));
-            const isSingle = pairPosts.length === 1;
-
-            gsap.fromTo(
-              pairPosts,
-              {
-                autoAlpha: 0.2,
-                x: (index) => (isSingle ? 0 : index === 0 ? -110 : 110),
-                y: 64,
-                scale: 0.95,
-              },
-              {
-                autoAlpha: 1,
-                x: 0,
-                y: 0,
-                scale: 1,
-                ease: "none",
-                scrollTrigger: {
-                  trigger: pair,
-                  start: "top 92%",
-                  end: "center 58%",
-                  scrub: 0.8,
-                },
-              },
-            );
-          });
-        },
-      );
-
-      media.add(
-        "(max-width: 63.99rem) and (prefers-reduced-motion: no-preference)",
-        () => {
-          gsap.utils.toArray('[data-media-kind="post"]').forEach((post, index) => {
-            const direction = index % 2 === 0 ? -1 : 1;
-
-            gsap.fromTo(
-              post,
-              {
-                autoAlpha: 0.25,
-                x: direction * 42,
-                y: 48,
-                scale: 0.97,
-              },
-              {
-                autoAlpha: 1,
-                x: 0,
-                y: 0,
-                scale: 1,
-                ease: "none",
-                scrollTrigger: {
-                  trigger: post,
-                  start: "top 94%",
-                  end: "top 62%",
-                  scrub: 0.65,
-                },
-              },
-            );
-          });
-        },
-      );
-
       const refresh = contextSafe(() => {
         scrollCaseStudyToTop();
         ScrollTrigger.refresh();

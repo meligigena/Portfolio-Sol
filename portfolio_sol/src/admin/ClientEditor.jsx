@@ -889,6 +889,7 @@ export function ClientEditor({ initialDraft, mode, onCancel, onSaved, service })
               aria-label={`Ediciones de ${draft.name || "nuevo cliente"}`}
               className="admin-edition-tabs"
               role="tablist"
+              style={{ "--edition-count": draft.editionDrafts.length }}
             >
               {draft.editionDrafts.map((edition) => {
                 const identity = editionDraftIdentity(edition);
